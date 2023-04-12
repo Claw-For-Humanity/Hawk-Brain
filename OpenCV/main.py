@@ -9,41 +9,61 @@ import tkinter as tk
 
 def interface():
     window = tk.Tk()
-    window.title("Project Claw For Humanity Main Window")
+    window.title("Project Claw For Humanity Port Selector")
     window.geometry("600x240")
     window.resizable(True,True)
-    lable = tk.Label(window, text='select com port', font=('Arial', 15))
-    lable.place(x=250,y=0)
-    
-    ent = tk.Entry(window)
-    ent.place(x = 250, y = 100)
-    
-    
+    ComLable = tk.Label(window, text='Enter com port', font=('Arial', 15))
+    ComLable.place(x=250,y=0)
+    ComEnt = tk.Entry(window)
+    ComEnt.place(x= 250, y= 100)
+    CamPortLabel = tk.Label(window, text='Enter Camera Port // Default is 0', font=('Arial',15))
+    CamPortLabel.place(x=250, y=320)
     btn = tk.Button(window, text='Next')
-    btn.config(command=__startPort__())
-    btn.place(x= 250, y = 300)
+    btn.config(command=__startPort__(ComEnt))
+    btn.place(x= 250, y= 300)
+    window.mainloop()
+    
+def colourInterface():
+    ColourWindow = tk.Tk()
+    ColourWindow.title("Project Claw For Humanity Main")
+    ColourWindow.geometry("1000x800")
+    ColourWindow.resizable(True,True)
+    # colours and buttons
+    redBtn = tk.Button(ColourWindow, text='red')
+    redBtn.place(x= 100, y= 100)
+    bluBtn = tk.Button(ColourWindow, text='blue')
+    bluBtn.place(x= 200, y= 100)
+    yelBtn = tk.Button(ColourWindow, text = 'green')
+    yelBtn.place()
+    
 
                         # camera work
 # global variables for contour ***DO NOT CHANGE***
 resolution = 1280,720
 actual_redbox = None
 actual_redbox = None
-frontCamPort = 0
+
 cameraAngle = 130
 frontVid = None
 
 
 
-def __initializeCam__():
-    global frontCamPort
+def __initializeCam__(port):
+
     global frontVid
     global centerXY
     global resolution
 
+    
+    
     #catch Camera
-    frontVid = cv2.VideoCapture(frontCamPort)
+    frontVid = cv2.VideoCapture(port)
     if frontVid.isOpened():
-        print("[LOG] " + f'front vid // selected port is "{frontCamPort}"')
+        print("[LOG] " + f'front vid // selected port is "{port}"')
+    else:
+        print(f'Check port -- Camera {port}')
+        tk.messagebox.showinfo(title='Warnign', message='Check Your Camera Port')
+
         
     
     # set camera resolution
@@ -68,16 +88,18 @@ def __initializeCam__():
 serialComPort = 3
 serialInst = None # dont touch this
 
-def __startPort__():
+def __startPort__(COMPORT):
+    global window
+    window.destroy()
     print('entered startport')
     global serialComPort
     global serialInst
 
     serialInst = serial.Serial()
-    serialInst.port = "COM4"
+    serialInst.port = str(COMPORT)
     serialInst.open()
     if not serialInst.is_open:
-        print('no serial com detected. change port')
+        tk.messagebox.showinfo(title='Warnign', message='Check Your COM Port')
         return
     else:
         pass
@@ -86,14 +108,14 @@ def __startPort__():
 
 
 # colour
-# red = 1 // green = 2 // blue = 
-def sender(colour):
-    print(colour)
+# red = 1 // green = 2 // blue = 3
+def sender(time):
     global serialInst
-    packed = struct.pack('>' + 'f'*len(colour), *colour)
-    # serialInst.write(packed)
-    print(packed)
-    serialInst.write()
+    data = time
+    packed = data.encode()
+    serialInst.write(packed)
+    print(f'Packed data sent, sent data is {packed}')
+    
 
 
 
