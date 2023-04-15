@@ -133,44 +133,63 @@ def camVid(frontVid):
     # return photo_img
     return standard
 
+passed = False
 def __camInit__(selectedport, len, resolutionX, resolutionY):
-    passed = False
-    
-    if len == 1:
-        frontVid = cv2.VideoCapture(selectedport)
-        resolutionX = float(resolutionX)
-        resolutionY = float(resolutionY)
-        
-        if frontVid.isOpened():
-            print('[LOG]: frontvid is open')
-            frontVid.set(cv2.CAP_PROP_FRAME_WIDTH, resolutionX)
-            frontVid.set(cv2.CAP_PROP_FRAME_HEIGHT, resolutionY)
-            passed = True
-        else:
-            tk.messagebox.showinfo(title='Error', message='Front Camera encountered problem')
-            exit()
-            
-
-    else:
-        i=0
-        svr = {}
-        while i<=len:
-            name = f'video{i}'
-            svr[name] = cv2.VideoCapture(i)
-            if not svr[name].isOpened():
-                tk.messagebox.showinfo(title='Error', message=f'Camera {name} encountered problem')
+    global passed, frontVid
+    print(passed)
+    if passed == False:
+        if len == 1:
+            frontVid = cv2.VideoCapture(selectedport)
+            print(f'x = {resolutionX} // y = {resolutionY}')
+            if resolutionX and resolutionY:
+                resolutionX = float(resolutionX)
+                resolutionY = float(resolutionY)
             else:
-                svr[name].set(cv2.CAP_PROP_FRAME_WIDTH, float(resolutionX))
-                svr[name].set(cv2.CAP_PROP_FRAME_HEIGHT, float(resolutionY))
-                i+=1
-    if passed == True:
-        alpha = camVid(frontVid)
-        return alpha
+                print(f'resolution not set {resolutionX} and {resolutionY}')
+                tk.messagebox.showinfo(title='Error', message = 'Resolution box empty')
+            
+            if frontVid.isOpened():
+                print('[LOG]: frontvid is open')
+                frontVid.set(cv2.CAP_PROP_FRAME_WIDTH, resolutionX)
+                frontVid.set(cv2.CAP_PROP_FRAME_HEIGHT, resolutionY)
+                passed = True
+                __camInit__(selectedport, len, resolutionX, resolutionY)
+            else:
+                tk.messagebox.showinfo(title='Error', message='Front Camera encountered problem')
+                exit()
+                
+
+        else:
+            i=0
+            svr = {}
+            while i<=len:
+                name = f'video{i}'
+                svr[name] = cv2.VideoCapture(i)
+                if not svr[name].isOpened():
+                    tk.messagebox.showinfo(title='Error', message=f'Camera {name} encountered problem')
+                else:
+                    svr[name].set(cv2.CAP_PROP_FRAME_WIDTH, float(resolutionX))
+                    svr[name].set(cv2.CAP_PROP_FRAME_HEIGHT, float(resolutionY))
+                    i+=1
+                
+    elif passed == True:
+        print(f'entered elif statement passed state is {passed}/n')
+   
+        read, standard = frontVid.read()
+        print(f'standard data recieved is {standard}')
+        return standard
+        
     
 def camDisplayer (selectedPort, len, resolutionX, resolutionY):
     selectedPort = int(selectedPort)
     while True:
-        cv2.imshow('display',__camInit__(selectedPort, len, resolutionX, resolutionY))
+        ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
+        print(f'ret is  {ret}')
+        cv2.imshow('display',ret)
+        global debugVar
+        debugVar += 1
+        if debugVar == 300:
+            break
         if cv2.waitKey(1) == ord('q'):
             break
         
@@ -189,17 +208,17 @@ def camera_Setting(camPort):
     infoRes = tk.Label(camWindow, text='Width x Height for camera')
     infoRes.place(x=30, y=5)
     leftX = tk.Entry(camWindow, width=4)
-    leftX.setvar(1000)
+    leftX.setvar('1000')
     leftX.place(x=30, y=30)
     rightX = tk.Entry(camWindow, width=4)
-    rightX.setvar(1000)
+    rightX.setvar('1000')
     rightX.place(x=90,y=30)
     x = tk.Label(camWindow, text='X')
     x.place(x=79, y=33)
     
     
     
-    btn = tk.Button(camWindow, text='search', command=camDisplayer(camPort, len(arr), leftX.get(), rightX.get()))
+    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, len(arr), leftX.get(), rightX.get()))
     btn.place(x= 30, y= 67)
     
     
