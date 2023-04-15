@@ -4,6 +4,8 @@ import cv2
 import serial.tools.list_ports
 import serial
 from PIL import Image, ImageTk
+import time
+
 
 debugVar = 0
 
@@ -38,7 +40,6 @@ def searchSerialPort():
     print(HWID[0])
     return HWID
 
-
 def saver(cam, com, len):
     serialCom = com
     
@@ -48,12 +49,8 @@ def saver(cam, com, len):
             camera_Setting(camPort= cam[i])
             i+=1
     else:
-        camera_Setting(camPort= cam)
+        camera_Setting(camPort= cam)  
     
-    
-  
-    
-
 def __initiate__():
     delta = 0
     camPorts = searchPortCam()
@@ -123,17 +120,20 @@ def colourInterface():
     yelBtn = tk.Button(ColourWindow, text = 'green')
     yelBtn.place()
 
-def camVid(frontVid):
-    read, standard = frontVid.read()
-    # standard1 = cv2.cvtColor(standard, cv2.COLOR_BGR2RGB)
-    #     # Convert the image to PIL format
-    # pil_img = Image.fromarray(standard1)
+def camVid(camWindow, standard, resolX, resolY):
+    canvas = tk.Canvas(camWindow, width= resolX, height= resolY)
+    canvas.place(x= 300, y= 300)
+    while True:
+        standard1 = cv2.cvtColor(standard, cv2.COLOR_BGR2RGB)
+            # Convert the image to PIL format
+        pil_img = Image.fromarray(standard1)
 
-    # # Convert the PIL image to a PIL.ImageTk.PhotoImage object
-    # photo_img = ImageTk.PhotoImage(pil_img)
+        # Convert the PIL image to a PIL.ImageTk.PhotoImage object
+        photo_img = ImageTk.PhotoImage(pil_img)
 
-    # return photo_img
-    return standard
+        canvas.create_image(300,300, anchor ='nw', Image = photo_img)
+
+        # return photo_img
 
 passed = False
 def __camInit__(selectedport, len, resolutionX, resolutionY):
@@ -159,51 +159,57 @@ def __camInit__(selectedport, len, resolutionX, resolutionY):
             else:
                 tk.messagebox.showinfo(title='Error', message='Front Camera encountered problem')
                 return 'error'
-                
-                
-
-        # else:
-        #     i=0
-        #     svr = {}
-        #     while i<=len:
-        #         name = f'video{i}'
-        #         svr[name] = cv2.VideoCapture(i)
-        #         if not svr[name].isOpened():
-        #             tk.messagebox.showinfo(title='Error', message=f'Camera {name} encountered problem')
-        #         else:
-        #             svr[name].set(cv2.CAP_PROP_FRAME_WIDTH, float(resolutionX))
-        #             svr[name].set(cv2.CAP_PROP_FRAME_HEIGHT, float(resolutionY))
-        #             i+=1
                     
-                
     elif passed == True:
         print(f'entered elif statement passed state is {passed}\n')
    
         read, standard = frontVid.read()
-        print(f'standard data recieved is {standard}')
         return standard
         
-    
-def camDisplayer (selectedPort, len, resolutionX, resolutionY):
-    selectedPort = int(selectedPort)
-    inform = 0
-    while True:
-        
+
+def update_video(ret, window, canvas, canvas_image,resX,resY):
+    # Convert the frame from BGR to RGB
+    frame = cv2.cvtColor(ret, cv2.COLOR_BGR2RGB)
+
+    # Resize the frame to fit the size of the canvas
+    frame = cv2.resize(frame, (int(resX), int(resY)))
+
+    # Convert the frame to a PIL image
+    img = Image.fromarray(frame)
+
+    # Convert the PIL image to a Tkinter image
+    imgtk = ImageTk.PhotoImage(image=img)
+  
+    # Update the canvas with the new image
+    canvas.itemconfig(canvas_image, image=imgtk)
+    canvas.image = imgtk
+
+inform = 0
+def camDisplayer(selectedPort, len, resolutionX, resolutionY, windo):
+    global inform
+    ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
+
+    if inform == 0:
         ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
-        
-        if inform == 0:
-            if ret == None:
-                ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
-                inform+=1
-            else:
-                inform+=1
-        else:
-            pass
-        # print(f'ret is  {ret}')
-        cv2.imshow('display',ret)
-        if cv2.waitKey(1) == ord('q'):
-            print('q pressed video exit.')
-            break
+        inform += 1
+
+    else:
+        pass
+
+    canvas = tk.Canvas(windo, width=resolutionX, height=resolutionY)
+    canvas.pack()
+    canvas_image = canvas.create_image(0, 0, anchor=tk.NW)
+
+
+    # update the video in a loop
+    def update_loop():
+        ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
+        update_video(ret, windo, canvas, canvas_image, resolutionX, resolutionY)
+        # call this function again after 10ms
+        windo.after(10, update_loop)
+    update_loop()
+
+                
         
 def camera_Setting(camPort):
     global window
@@ -230,7 +236,7 @@ def camera_Setting(camPort):
     
     
     
-    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, 1, leftX.get(), rightX.get()))
+    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, 1, leftX.get(), rightX.get(),windo= camWindow))
     btn.place(x= 30, y= 67)
     
     
