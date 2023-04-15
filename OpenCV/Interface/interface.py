@@ -40,6 +40,8 @@ def searchSerialPort():
 
 
 def saver(cam, com, len):
+    serialCom = com
+    
     i = 0
     if len > 1:
         while i < len:
@@ -156,24 +158,26 @@ def __camInit__(selectedport, len, resolutionX, resolutionY):
                 __camInit__(selectedport, len, resolutionX, resolutionY)
             else:
                 tk.messagebox.showinfo(title='Error', message='Front Camera encountered problem')
-                exit()
+                return 'error'
+                
                 
 
-        else:
-            i=0
-            svr = {}
-            while i<=len:
-                name = f'video{i}'
-                svr[name] = cv2.VideoCapture(i)
-                if not svr[name].isOpened():
-                    tk.messagebox.showinfo(title='Error', message=f'Camera {name} encountered problem')
-                else:
-                    svr[name].set(cv2.CAP_PROP_FRAME_WIDTH, float(resolutionX))
-                    svr[name].set(cv2.CAP_PROP_FRAME_HEIGHT, float(resolutionY))
-                    i+=1
+        # else:
+        #     i=0
+        #     svr = {}
+        #     while i<=len:
+        #         name = f'video{i}'
+        #         svr[name] = cv2.VideoCapture(i)
+        #         if not svr[name].isOpened():
+        #             tk.messagebox.showinfo(title='Error', message=f'Camera {name} encountered problem')
+        #         else:
+        #             svr[name].set(cv2.CAP_PROP_FRAME_WIDTH, float(resolutionX))
+        #             svr[name].set(cv2.CAP_PROP_FRAME_HEIGHT, float(resolutionY))
+        #             i+=1
+                    
                 
     elif passed == True:
-        print(f'entered elif statement passed state is {passed}/n')
+        print(f'entered elif statement passed state is {passed}\n')
    
         read, standard = frontVid.read()
         print(f'standard data recieved is {standard}')
@@ -182,15 +186,23 @@ def __camInit__(selectedport, len, resolutionX, resolutionY):
     
 def camDisplayer (selectedPort, len, resolutionX, resolutionY):
     selectedPort = int(selectedPort)
+    inform = 0
     while True:
+        
         ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
-        print(f'ret is  {ret}')
+        
+        if inform == 0:
+            if ret == None:
+                ret = __camInit__(int(selectedPort), len, resolutionX, resolutionY)
+                inform+=1
+            else:
+                inform+=1
+        else:
+            pass
+        # print(f'ret is  {ret}')
         cv2.imshow('display',ret)
-        global debugVar
-        debugVar += 1
-        if debugVar == 300:
-            break
         if cv2.waitKey(1) == ord('q'):
+            print('q pressed video exit.')
             break
         
 def camera_Setting(camPort):
@@ -218,7 +230,7 @@ def camera_Setting(camPort):
     
     
     
-    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, len(arr), leftX.get(), rightX.get()))
+    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, 1, leftX.get(), rightX.get()))
     btn.place(x= 30, y= 67)
     
     
