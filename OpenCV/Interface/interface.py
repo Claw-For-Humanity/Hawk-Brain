@@ -276,17 +276,23 @@ def __initCom__(comPort, baudrate):
     if state == 'connected':
         print('connected')
         nxtBtn = tk.Button(comWindow, text='next', command=lambda: openConsole(HWID_DEVICE[where]))
+        nxtBtn.place(x=30, y =200)
     else:
         comWindow.update()
-
+j=0
 def connect(portName, bdrate):
+    global j
+    j+=1
+    print(f'called Connect {j}')
     global serialInst
     state = 'not connected'
-    comWindow.update()
+    # comWindow.update()
     serialInst = serial.Serial(str(portName), int(bdrate))
-    serialInst.port = portName
-    serialInst.open()
-    if not serialInst.is_open():
+    # serialInst.open()
+    # serialInst.port = portName
+    if serialInst.is_open:
+        print(f"{serialInst} is open")   
+    if not serialInst.is_open:
         print('serial opening failed')
         tk.messagebox.showinfo(title= 'error', message= 'opening port failed!')
         comWindow.update()
@@ -296,7 +302,7 @@ def connect(portName, bdrate):
         state = 'successfully opened'
         pass
     send = 604
-    serialInst.write(bytes(f'{send}'))
+    serialInst.write(bytes(f'{send}'.encode()))
     
     while serialInst.in_waiting == 0:
         pass
@@ -358,10 +364,9 @@ def openConsole(port):
     
 
 selectedcolours = []
-def detection(vidData, selectedcolours, resolution, ):
+# def detection(vidData, selectedcolours, resolution, ):
     
     
-
 
 
 __initiate__()
