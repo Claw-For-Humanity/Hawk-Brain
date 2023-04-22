@@ -5,6 +5,8 @@ import serial.tools.list_ports
 import serial
 from PIL import Image, ImageTk
 import subprocess
+import threading
+import time
 
 
 # Create global variables
@@ -24,17 +26,12 @@ def dicCheck(dictionary, chkVal):
             break
     return current 
 
+g = 0
 # Step 1: 1st screen, select camport and comport
 def __initiate__():
     # create variables
     global window
     delta = 0 # count how many cameras there are
-    camPorts = searchPortCam() # search comports
-    comPorts = searchSerialPort() # search serial ports
-    baudRates = [300,1200,2400,9600,10417,19200,57600,115200]
-    ax = 30 # default x location for camera entry
-    ay =  150 # default location for camera entry
-    ayl = 130 # default location for camera entry explanation
     
     # create window using tkinter
     window = tk.Tk()
@@ -42,20 +39,49 @@ def __initiate__():
     window.geometry("600x240")
     window.resizable(True,True)
     
+    
+    baudRates = [300,1200,2400,9600,10417,19200,57600,115200]
+    ax = 30 # default x location for camera entry
+    ay =  150 # default location for camera entry
+    ayl = 130 # default location for camera entry explanation
+    
     # Select comport and camport
     comList_val = tk.StringVar(window, "Com Port")
     comList_val.set("Com Port")
     ComLable = tk.Label(window, text='Select Communication Port', font=('Arial', 15))
     ComLable.place(x=ax,y=20)
-    ComOption = tk.OptionMenu(window, comList_val, *comPorts)
-    ComOption.place(x= ax, y= 45)
+    
+    
     
     baud_val = tk.StringVar(window,"Baud Rate")
     baud_val.set("Baud Rate")
     baudLable = tk.Label(window, text="Select Baud Rate", font=('Arial', 15))  
     baudLable.place(x= ax, y= 80)    
-    baudOption = tk.OptionMenu(window, baud_val, *baudRates)
-    baudOption.place(x= ax, y= 100)
+    
+    
+    
+    def receiveVal():
+        global g,comPorts,camPorts, ComOption, baudOption
+        g +=1
+        HWID, HWID_DEVICE = searchSerialPort()
+        camPorts = searchPortCam() # search comports
+        comPorts = HWID
+        
+        
+        ComOption = tk.OptionMenu(window, comList_val, *comPorts)
+        baudOption = tk.OptionMenu(window, baud_val, *baudRates)
+        ComOption.place(x= ax, y= 45)
+        baudOption.place(x= ax, y= 100)
+        
+        print(f'receiveVal happened {g} times')
+        window.after(1000, receiveVal)
+        
+    
+    
+
+    receiveVal()
+    
+
     
     # happens only if there are more than 1 camera 
     if len(camPorts) > 1:
@@ -94,7 +120,6 @@ def __initiate__():
 # for __initiate__() // search comport and camport
 def searchPortCam():
     index = 0
-    global arr
     arr = []
     while True:
         cap = cv2.VideoCapture(index)
@@ -105,9 +130,12 @@ def searchPortCam():
         cap.release()
         index += 1
     return arr
+
 def searchSerialPort():
     #variable
     global HWID_DEVICE, HWID
+    HWID_DEVICE = []
+    HWID = []
     i=0
     ports = list(serial.tools.list_ports.comports())
 
@@ -119,7 +147,7 @@ def searchSerialPort():
             HWID_DEVICE.append(port.device)
             HWID.append(f"Name: {port.device} || Description: {port.description}")
             i+=1
-    return HWID
+    return HWID, HWID_DEVICE
 
 # setting for camera -> set resolution, camera preview
 def camera_Setting(camPort, comPort, bdrate):
@@ -169,6 +197,7 @@ def camera_Setting(camPort, comPort, bdrate):
     camWindow.mainloop()
 
 def camDisplayer(camPort, len, resolutionX, resolutionY, windo, comport, bdrate):
+
     resolutionX = int(resolutionX)
     resolutionY = int(resolutionY)
     global inform
@@ -190,6 +219,9 @@ def camDisplayer(camPort, len, resolutionX, resolutionY, windo, comport, bdrate)
     canvas.pack()
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
 
+    print(f'comport is {comport}')
+    print(f'bdrate is {bdrate}')
+    
     comCall = tk.Button(windo, text='next', command=lambda: __initCom__(comport, bdrate))
     comCall.place(x= 400, y= 300)
 
@@ -269,7 +301,7 @@ def __initCom__(comPort, baudrate):
     stateInfo = tk.Label(comWindow, text=f'current state is {state}')
     stateInfo.place(x=30, y=50)
     
-    cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: connect(HWID_DEVICE[where], baudrate))
+    cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: threadStart(HWID_DEVICE[where], baudrate))
     
     cntBtn.place(x= 30, y= 90)
     
@@ -280,16 +312,96 @@ def __initCom__(comPort, baudrate):
     else:
         comWindow.update()
 j=0
+
+openwindow = False
+ri = 0
+
+
+def threadStart(portName, bdrate):
+    # thread1 = threading.Thread(target=lambda: receiver())
+
+    global receive,openwindow
+    if ri > 0:
+        if receive.state() == 'normal':
+            openwindow = False    
+            receiver(portName, bdrate)
+    else:
+        openwindow = True
+        receiver(portName, bdrate)
+        
+    print("receiver function initiated")
+
+    
+    
+    
+
+def receiver(portName, bdrate):
+    
+    global receive,ri
+    ri+=1
+    
+    receiveBool = False
+    def log(widget, message, level='INFO'):
+        tag = level.upper()
+        widget.insert(tk.END, message + "\n", tag)
+    
+    print(f'openwindow is {openwindow}')
+        
+    if openwindow == True:
+        receive = tk.Tk()
+        receive.title('incoming data logger')
+        receive.resizable(False, False)
+
+        
+    elif openwindow == False:
+        print('openWindow is False')
+    else:
+        print('this is not possible')
+    
+    text_widget = tk.Text(receive, height=20, width=80)
+    text_widget.pack()
+        
+    log(text_widget, 'looking for incoming bytes')
+    
+    def checker():
+        global receiveBool
+        receiveBool = True
+        print(f'checker initiated + receiveBool Status is {receiveBool}')
+        while True:
+            # print('checker in progress')
+            if type(serialInst) != type(None):
+                if serialInst.in_waiting > 0:
+                    log(text_widget, message=f'incoming bytes from Arduino: {serialInst.read(serialInst.in_waiting).decode()}')
+            else:
+                log(text_widget, message = f'serialInst type is {type(serialInst)}')
+    
+    thread1 = threading.Thread(target= checker)
+    thread1.start()
+    
+    print('thread1 initiated')
+    
+    print(f'waiting about to start current time is {time.time()}\n target time is {time.time()+4}')
+
+    print(thread1.is_alive )
+    print(receiveBool)
+    
+    if receiveBool == True:
+        connect(portName, bdrate)
+    
+    receive.mainloop()
+
+
+
+    
+    
+
 def connect(portName, bdrate):
-    global j
-    j+=1
-    print(f'called Connect {j}')
-    global serialInst
+    print('connect function initiated')
+    global serialInst, j
+    
     state = 'not connected'
-    # comWindow.update()
     serialInst = serial.Serial(str(portName), int(bdrate))
-    # serialInst.open()
-    # serialInst.port = portName
+    
     if serialInst.is_open:
         print(f"{serialInst} is open")   
     if not serialInst.is_open:
@@ -301,18 +413,8 @@ def connect(portName, bdrate):
     else:
         state = 'successfully opened'
         pass
-    send = 604
+    send = 3
     serialInst.write(bytes(f'{send}'.encode()))
-    
-    while serialInst.in_waiting == 0:
-        pass
-    
-    response = serialInst.read(serialInst.in_waiting)
-    print(response)
-    
-    if response == str(send):
-        print('connection success!')
-        state = 'connected'
     
     comWindow.update()
     return state
@@ -369,5 +471,5 @@ selectedcolours = []
     
 
 
+# receiver()
 __initiate__()
-
