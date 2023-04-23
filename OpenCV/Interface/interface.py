@@ -318,32 +318,42 @@ ri = 0
 
 
 def threadStart(portName, bdrate):
-    # thread1 = threading.Thread(target=lambda: receiver())
 
-    global receive,openwindow
+    global receive,openwindow,stopflag
+    stopflag = threading.Event()
+    
     if ri > 0:
         if receive.state() == 'normal':
             openwindow = False    
             receiver(portName, bdrate)
     else:
+        print('line 329 // entered else statement')
         openwindow = True
         receiver(portName, bdrate)
         
-    print("receiver function initiated")
+    print("receiver funtions exited")
+    stopflag.set()
+    thread1.join()
+    print(f'trying to kill thread \n thread state is {thread1.is_alive}')
 
     
-    
-    
+def log(widget, message, level='INFO'):
+    tag = level.upper()
+    widget.insert(tk.END, message + "\n", tag)
+
+def mid_organizer(portName, bdrate):
+    global receive
+    log(text_widget, 'aftter mainloop 500 millisec')
+    log(text_widget, 'after mainloop 10000 millisec, run connect')
+    receive.after(10000, connect(portName, bdrate))
 
 def receiver(portName, bdrate):
     
-    global receive,ri
+    global receive,ri,thread1,text_widget
     ri+=1
     
-    receiveBool = False
-    def log(widget, message, level='INFO'):
-        tag = level.upper()
-        widget.insert(tk.END, message + "\n", tag)
+    
+    
     
     print(f'openwindow is {openwindow}')
         
@@ -351,6 +361,8 @@ def receiver(portName, bdrate):
         receive = tk.Tk()
         receive.title('incoming data logger')
         receive.resizable(False, False)
+        text_widget = tk.Text(receive, height=20, width=80)
+        text_widget.pack()
 
         
     elif openwindow == False:
@@ -358,66 +370,95 @@ def receiver(portName, bdrate):
     else:
         print('this is not possible')
     
-    text_widget = tk.Text(receive, height=20, width=80)
-    text_widget.pack()
+    receiveBool = False
         
     log(text_widget, 'looking for incoming bytes')
+    receiveBoolLock = threading.Lock()
     
     def checker():
-        global receiveBool
-        receiveBool = True
-        print(f'checker initiated + receiveBool Status is {receiveBool}')
-        while True:
+        print('thread started -- checker() \n \n')
+            
+        nonlocal receiveBool
+        with receiveBoolLock:
+            receiveBool = True    
+            print(f'checker initiated + receiveBool Status is {receiveBool}')
+                    
+        print('line 388 // thread check')
+        
+        while not stopflag.is_set():
             # print('checker in progress')
             if type(serialInst) != type(None):
                 if serialInst.in_waiting > 0:
+                    print('feed from arduino detected \n')
+                    incoming = serialInst.read(serialInst.in_waiting)
+                    decoded = incoming.decode('utf-8')
+                    print(f'incoming bytes from Arduino: {decoded} \n')
+                    
                     log(text_widget, message=f'incoming bytes from Arduino: {serialInst.read(serialInst.in_waiting).decode()}')
             else:
-                log(text_widget, message = f'serialInst type is {type(serialInst)}')
-    
+                print('waiting for feed')
+                time.sleep(3)
+
+    print('line 396 // thread initialized')
     thread1 = threading.Thread(target= checker)
     thread1.start()
     
-    print('thread1 initiated')
+    print('line 389 // thread1 initiated')
     
-    print(f'waiting about to start current time is {time.time()}\n target time is {time.time()+4}')
-
-    print(thread1.is_alive )
-    print(receiveBool)
+    print(f'thread state is {thread1.is_alive}')
     
-    if receiveBool == True:
-        connect(portName, bdrate)
+    time.sleep(8)
+    
+    print('mainloop enter \n')
+    
+    # Call after() on the text widget to schedule mid_organizer after the mainloop
+    text_widget.after(500, mid_organizer, portName, bdrate)
     
     receive.mainloop()
-
-
-
     
     
+    
+    
+    
+
+   
+
+    
+
 
 def connect(portName, bdrate):
     print('connect function initiated')
-    global serialInst, j
+    global serialInst, j, receive, text_widget
     
-    state = 'not connected'
+    # state = 'not connected'
     serialInst = serial.Serial(str(portName), int(bdrate))
     
+    serialInst.port = str(portName)
+    serialInst.baudrate = int(bdrate)
+    
     if serialInst.is_open:
-        print(f"{serialInst} is open")   
-    if not serialInst.is_open:
-        print('serial opening failed')
-        tk.messagebox.showinfo(title= 'error', message= 'opening port failed!')
-        comWindow.update()
-        state = 'cannot be opened'
-        return state
-    else:
-        state = 'successfully opened'
-        pass
+        print(f"{serialInst} is open")
+        state = 'serialInst is open'   
+    
+    # elif not serialInst.is_open:
+    #     print('serial opening failed')
+    #     tk.messagebox.showinfo(title= 'error', message= 'opening port failed!')
+    #     comWindow.update()
+    #     state = 'cannot be opened'
+    #     return state
+    # else:
+    #     state = 'successfully opened'
+    #     pass
+    
+    
     send = 3
     serialInst.write(bytes(f'{send}'.encode()))
+    print(f"{send} is successfully sent to \n {serialInst}")
     
-    comWindow.update()
-    return state
+    
+    text_widget.after(5000, mid_organizer, portName, bdrate)
+    # comWindow.update()
+    # return state
 
 def openConsole(port):
     global comWindow
