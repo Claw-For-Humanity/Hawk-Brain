@@ -7,6 +7,8 @@ from PIL import Image, ImageTk
 import subprocess
 import threading
 import time
+import numpy as np
+
 
 
 # Create global variables
@@ -505,10 +507,33 @@ def openConsole(port):
     consl.after(10, read_from_console)
     comWindow = tk.Text()        
     
-
-selectedcolours = []
-# def detection(vidData, selectedcolours, resolution, ):
     
+def colourRange (color):
+    if color == 'red':
+        red_lower_colour = np.array([162,100,100])
+        red_upper_colour = np.array([185,255,255])
+        return red_lower_colour, red_upper_colour
+    elif color == 'blue':
+        blue_lower_colour = np.array([104,50,100])
+        blue_upper_colour = np.array([126,255,255])
+        return blue_lower_colour, blue_upper_colour
+    elif color == 'green':
+        green_lower_colour = np.array([33,50,50])
+        green_upper_colour = np.array([40,255,255])
+        return green_lower_colour, green_upper_colour
+
+def detection(camera, selectedcolour):
+    read, standard = camera.read()
+    icol = 0
+    tank ={}
+    while icol <= len(selectedcolour):
+        tank[icol] = 
+    
+    if selectedcolour == 'Red':
+        colourRange
+    
+    
+    print('entered detection.')    
     
 
 
