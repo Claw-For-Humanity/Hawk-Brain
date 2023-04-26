@@ -53,8 +53,6 @@ def __initiate__():
     ComLable = tk.Label(window, text='Select Communication Port', font=('Arial', 15))
     ComLable.place(x=ax,y=20)
     
-    
-    
     baud_val = tk.StringVar(window,"Baud Rate")
     baud_val.set("Baud Rate")
     baudLable = tk.Label(window, text="Select Baud Rate", font=('Arial', 15))  
@@ -63,12 +61,11 @@ def __initiate__():
     
     
     def receiveVal():
-        global g,comPorts,camPorts, ComOption, baudOption
+        global g,comPorts,camPorts, ComOption, baudOption, HWID, HWID_DEVICE
         g +=1
         HWID, HWID_DEVICE = searchSerialPort()
         camPorts = searchPortCam() # search comports
         comPorts = HWID
-        
         
         ComOption = tk.OptionMenu(window, comList_val, *comPorts)
         baudOption = tk.OptionMenu(window, baud_val, *baudRates)
@@ -76,16 +73,14 @@ def __initiate__():
         baudOption.place(x= ax, y= 100)
         
         print(f'receiveVal happened {g} times')
-        window.after(1000, receiveVal)
+        window.after(3000, receiveVal)
         
-    
-    
-
+        
     receiveVal()
     
-
     
     # happens only if there are more than 1 camera 
+    # multiple cameras on hold for now
     if len(camPorts) > 1:
         # create local variables
         camList_val = {}
@@ -107,6 +102,7 @@ def __initiate__():
         # button calls saver
         btn = tk.Button(window, text='Next', command=lambda: camera_Setting(holder, comList_val.get(), baud_val.get()))
         btn.place(x= ax+10, y= (ay+ayl+45))
+    
     else:
         CamPortLabel = tk.Label(window, text='Select Camera 1 Port', font=('Arial',15))
         CamPortLabel.place(x=ax, y=ayl)
@@ -153,19 +149,36 @@ def searchSerialPort():
 
 # setting for camera -> set resolution, camera preview
 def camera_Setting(camPort, comPort, bdrate):
-    # tempo work
-    tempo = cv2.VideoCapture(int(camPort))
-
-    if not tempo.isOpened():
-        tempo = cv2.VideoCapture(int(camPort))
-        camera_Setting(int(camPort), comPort, bdrate)
-    else:
-        frame_width = int(tempo.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(tempo.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # create variable
+    errorReTry = 0
     
     # kill window
     global window
     window.destroy()
+    
+    # save 3 variables
+    camPort = camPort
+    comPort = comPort
+    bdrate = bdrate
+    
+    # tempo work
+    cam = cv2.VideoCapture(int(camPort))
+
+    if not cam.isOpened():
+        print(f'camera encountered problem // line 165 // unknown issue // tried {errorReTry}')
+        cam = cv2.VideoCapture(int(camPort))
+        errorReTry += 1
+        
+        if errorReTry == 3:
+            tk.messagebox.showinfo(title= 'warninig', message = 'camera encountered problem // line 165 // unknown issue // exitting')
+            exit()
+        camera_Setting(int(camPort), comPort, bdrate)
+        
+    else:
+        print('camera captured successfully \n')
+        frame_width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
     
     # create window
     global camWindow
@@ -192,16 +205,13 @@ def camera_Setting(camPort, comPort, bdrate):
     recRes = tk.Label(camWindow, text=f'recommended camera resolution is {frame_width}x{frame_height}')
     recRes.place(x= 113, y= 69)
     
-    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, 1, leftX.get(), rightX.get(),camWindow, comPort, bdrate))
+    btn = tk.Button(camWindow, text='search', command=lambda: camDisplayer(camPort, 1, int(leftX.get()), int(rightX.get()),camWindow, comPort, bdrate))
     btn.place(x= 30, y= 67)
     
     
     camWindow.mainloop()
 
 def camDisplayer(camPort, len, resolutionX, resolutionY, windo, comport, bdrate):
-
-    resolutionX = int(resolutionX)
-    resolutionY = int(resolutionY)
     global inform
     ret = __camInit__(int(camPort), len, resolutionX, resolutionY)
     if inform == 0:
@@ -258,6 +268,7 @@ def __camInit__(selectedport, len, resolutionX, resolutionY):
             else:
                 tk.messagebox.showinfo(title='Error', message='Front Camera encountered problem')
                 return 'error'
+            
                     
     elif passed == True:
         read, standard = frontVid.read()
@@ -307,12 +318,12 @@ def __initCom__(comPort, baudrate):
     
     cntBtn.place(x= 30, y= 90)
     
-    if state == 'connected':
-        print('connected')
-        nxtBtn = tk.Button(comWindow, text='next', command=lambda: openConsole(HWID_DEVICE[where]))
-        nxtBtn.place(x=30, y =200)
-    else:
-        comWindow.update()
+    # if state == 'connected':
+    #     print('connected')
+    #     nxtBtn = tk.Button(comWindow, text='next', command=lambda: detection(__camInit__(int(camPort), len, resolutionXT, resolutionYT)))
+    #     nxtBtn.place(x=30, y =200)
+    # else:
+    #     comWindow.update()
 j=0
 
 openwindow = False
@@ -347,15 +358,14 @@ def mid_organizer(portName, bdrate):
     global receive
     log(text_widget, 'aftter mainloop 500 millisec')
     log(text_widget, 'after mainloop 10000 millisec, run connect')
+    log(text_widget,message=f'threadstate is {thread1.is_alive}')
+    log(text_widget, message=f'serial state is {serialInst.in_waiting}')
     receive.after(10000, connect(portName, bdrate))
 
 def receiver(portName, bdrate):
     
-    global receive,ri,thread1,text_widget
+    global receive,ri,thread1,text_widget,serialInst
     ri+=1
-    
-    
-    
     
     print(f'openwindow is {openwindow}')
         
@@ -365,10 +375,15 @@ def receiver(portName, bdrate):
         receive.resizable(False, False)
         text_widget = tk.Text(receive, height=20, width=80)
         text_widget.pack()
-
+        serialInst = serial.Serial(str(portName), int(bdrate))
+        if serialInst.is_open:
+            print('successfully connected')
+        else:
+            print('failed to connect')
         
     elif openwindow == False:
         print('openWindow is False')
+        print(f'the state of serial is {serialInst.is_open}')
     else:
         print('this is not possible')
     
@@ -377,55 +392,50 @@ def receiver(portName, bdrate):
     log(text_widget, 'looking for incoming bytes')
     receiveBoolLock = threading.Lock()
     
-    def checker():
+    def checker(serialInst):
         print('thread started -- checker() \n \n')
-            
+        error = 0
         nonlocal receiveBool
         with receiveBoolLock:
             receiveBool = True    
             print(f'checker initiated + receiveBool Status is {receiveBool}')
-                    
-        print('line 388 // thread check')
         
         while not stopflag.is_set():
             # print('checker in progress')
+            print(f'{serialInst.in_waiting}')
             if type(serialInst) != type(None):
                 if serialInst.in_waiting > 0:
                     print('feed from arduino detected \n')
                     incoming = serialInst.read(serialInst.in_waiting)
                     decoded = incoming.decode('utf-8')
                     print(f'incoming bytes from Arduino: {decoded} \n')
+                    log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
                     
-                    log(text_widget, message=f'incoming bytes from Arduino: {serialInst.read(serialInst.in_waiting).decode()}')
+                elif serialInst.in_waiting ==0:
+                    print('waiting for feed')
+                else:
+                    print('this is impossible')
             else:
-                print('waiting for feed')
-                time.sleep(3)
+                
+                print(f'serialInst type is None! encountered problem {serialInst}')
+                error+=1
+                if error == 50:
+                    print('error happened 50 times')
+                    thread1.join()
+                    
+                    
+                
 
-    print('line 396 // thread initialized')
-    thread1 = threading.Thread(target= checker)
+    thread1 = threading.Thread(target= checker, args=(serialInst))
     thread1.start()
     
-    print('line 389 // thread1 initiated')
     
     print(f'thread state is {thread1.is_alive}')
-    
-    time.sleep(8)
-    
-    print('mainloop enter \n')
     
     # Call after() on the text widget to schedule mid_organizer after the mainloop
     text_widget.after(500, mid_organizer, portName, bdrate)
     
     receive.mainloop()
-    
-    
-    
-    
-    
-
-   
-
-    
 
 
 def connect(portName, bdrate):
@@ -435,8 +445,6 @@ def connect(portName, bdrate):
     # state = 'not connected'
     serialInst = serial.Serial(str(portName), int(bdrate))
     
-    serialInst.port = str(portName)
-    serialInst.baudrate = int(bdrate)
     
     if serialInst.is_open:
         print(f"{serialInst} is open")
@@ -461,51 +469,6 @@ def connect(portName, bdrate):
     text_widget.after(5000, mid_organizer, portName, bdrate)
     # comWindow.update()
     # return state
-
-def openConsole(port):
-    global comWindow
-    comWindow.destroy()
-    
-    global consl, main
-    consl = tk.Tk()
-    consl.title("Console for Arduino")
-    consl.option_add("*Font","Ariel 15")
-    consl.geometry("1000x500")
-    consl.resizable(False, False)
-    
-    main = tk.Tk()
-    main.title("main program for eagle")
-    main.option_add("*Font","Ariel 15")
-    main.geometry("500x500")
-    main.resizable(True, True)
-    
-    text_widget = tk.Text(consl)
-    text_widget.pack(fill='both', expand= True)
-    
-    # Create the subprocess to run the Arduino CLI and get the serial port name
-    process = subprocess.Popen(['arduino', '--monitor', '--getpref', 'serial.port'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    # Get the serial port name from the output of the subprocess
-    serial_port = process.stdout.readline().strip()
-
-    # Create the subprocess to open the Arduino console
-    console = subprocess.Popen(['arduino', '--monitor', f'--port={str(port)}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    def read_from_console():
-        # Read a line of output from the console subprocess
-        line = console.stdout.readline()
-
-        # If the subprocess has terminated, stop reading output
-        if console.poll() is not None:
-            return
-
-        # Append the output to the Tkinter Text widget
-        text_widget.insert('end', line)
-
-        # Schedule the next read in 10 milliseconds
-        consl.after(10, read_from_console)
-
-    # Schedule the first read in 10 milliseconds
-    consl.after(10, read_from_console)
-    comWindow = tk.Text()        
     
     
 def colourRange (color):
@@ -522,15 +485,115 @@ def colourRange (color):
         green_upper_colour = np.array([40,255,255])
         return green_lower_colour, green_upper_colour
 
+
+def mskCombine(downTotal):
+    setmskComb = len(downTotal) - 1
+    counter = 0
+    savor = {}
+    
+    while setmskComb > 0:
+        if counter != len(downTotal):
+            if counter == 0:
+                savor[counter] = cv2.bitwise_or(downTotal[setmskComb], downTotal[setmskComb-1])
+                
+            else:
+                savor[counter] = cv2.bitwise_or(savor[counter-1],downTotal[setmskComb-1])
+                
+        counter += 1
+        setmskComb -= 1
+
+    finalCombined = savor[counter-1]
+    return finalCombined
+
+colors = {}
+colorReturn = {}
+selectedColours = {}
 def detection(camera, selectedcolour):
     read, standard = camera.read()
-    icol = 0
-    tank ={}
-    while icol <= len(selectedcolour):
-        tank[icol] = 
     
-    if selectedcolour == 'Red':
-        colourRange
+    icol = 0
+    icol2 = 0
+    icol3 = 0
+    tankDown ={}
+    tankUp = {}
+    
+    maskTotal =()
+    maskSave = {}
+    
+    tankDownTotal = ()
+    tankUpTotal = ()
+    
+    
+    while icol <= len(selectedcolour):
+        
+        tankDown[icol] = colourRange(selectedcolour(icol))(0)
+        tankUp[icol] = colourRange(selectedcolour(icol))(1)
+        
+        tankDownTotal = tankDownTotal + (tankDown[icol],)
+        tankUpTotal = tankUpTotal + (tankUp[icol],)
+        
+        icol += 1
+    
+    bottomHsv = cv2.cvtColor(standard, cv2.COLOR_BGR2HSV)
+    
+    
+    while icol2 <= len(tankDownTotal):
+        maskSave[icol2] = cv2.inRange(bottomHsv, tankDownTotal[icol2], tankUpTotal[icol2])
+        maskTotal = maskTotal + (maskSave[icol2],)
+        icol2 += 1 
+    
+    combined_mask = mskCombine(maskTotal)
+    
+    result = cv2.bitwise_and(standard, mask= combined_mask)
+    
+    videos = [result, combined_mask]
+    
+    if len(selectedcolour) > 1:
+        contours = {}
+        
+        while len(selectedcolour) >= icol3:
+            # draw boxes
+            contours[icol3], _1 = cv2.findContours(tankDown[icol3], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours[icol3]:
+                global colors, colorReturn, selectedColours
+                selectedColours[icol3] = cv2.boundingRect(contour)
+                # sender('red', red1)
+                if selectedColours[icol3][2]>90 and selectedColours[icol3][3]>90:          
+                    centerred = (2*selectedColours[icol3][0]+selectedColours[icol3][2])//2, (2*selectedColours[icol3][1]+selectedColours[icol3][3])//2
+                    print('')
+                    for redVid in videos:
+                        cv2.rectangle(redVid,(selectedColours[icol3][0],selectedColours[icol3][1]),(selectedColours[icol3][0]+selectedColours[icol3][2],selectedColours[icol3][1]+selectedColours[icol3][3]),(172,0,179),2)
+                        cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
+            icol3 += 1
+            
+    elif len(selectedcolour) == 1:      
+        contours2, _2 = cv2.findContours(tankDown[0], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours2:
+            global colors, colorReturn
+            colour1 = cv2.boundingRect(contour)
+            if colour1[2]>90 and colour1[3]>90:
+                centerblue = (2*colour1[0]+colour1[2])//2, (2*colour1[1]+colour1[3])//2
+                # sender('blue', blue1)
+                for blueVid in videos:
+                    cv2.rectangle(blueVid,(colour1[0],colour1[1]),(colour1[0]+colour1[2],colour1[1] + colour1[3]),(0,255,255),2)
+                    cv2.circle(blueVid, centerblue, 1, (255,0,0) ,thickness=3)
+                    # sender('blue')
+    else:
+        print("this ain't possible")
+        exit()
+
+    # make a box at wanted region
+    for boxes in videos:
+        cv2.rectangle(boxes,(590,410), (690,310), (0,0,255), 2) # change box location depending on target area
+    
+    # center pixel hsv value
+    centerBottomHsv = bottomHsv[360,640]
+    
+    #print(centerBottomHsv)
+    # make a circle
+    cv2.circle(result, (360,640) , 5, (255,0,0), 3)
+    #print(colour)
+    
     
     
     print('entered detection.')    
