@@ -185,8 +185,6 @@ def threadVid():
     print(f'thread state is {thread1.is_alive}')
 
 
-
-
 def camDisplayer(resolutionX, resolutionY, communication):
     print('entered camdisplayer')
     if not resolutionX and resolutionY:
