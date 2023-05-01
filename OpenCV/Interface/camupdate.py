@@ -271,6 +271,8 @@ def __initCom__(communication):
     cntBtn.place(x= 30, y= 90)
     camWindow.mainloop()
 
+def detect():
+    print('state connected')
 
 def log(widget, message, level = 'INFO'):
     tag = level.upper()
@@ -345,7 +347,7 @@ def comThread():
         
     log(text_widget, message=f"")
     
-def detection():
+
     
 
 
