@@ -322,8 +322,8 @@ def logOpen(communication):
                     log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
                     with receiveLock:
                         global decodedData 
-                        if decoded > 0:
-                            decodedData = decoded
+                        if not decoded == None:
+                            decodedData = decoded.copy()
             
                 elif serialInst.in_waiting == 0:
                     print('waiting for feed')
