@@ -318,12 +318,10 @@ def __initCom__(comPort, baudrate):
     
     cntBtn.place(x= 30, y= 90)
     
-    # if state == 'connected':
-    #     print('connected')
-    #     nxtBtn = tk.Button(comWindow, text='next', command=lambda: detection(__camInit__(int(camPort), len, resolutionXT, resolutionYT)))
-    #     nxtBtn.place(x=30, y =200)
-    # else:
-    #     comWindow.update()
+    if state == 'connected':
+        print('connected')
+        nxtBtn = tk.Button(comWindow, text='next')
+        nxtBtn.place(x=30, y =200)
 j=0
 
 openwindow = False

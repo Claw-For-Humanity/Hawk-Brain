@@ -179,7 +179,7 @@ def threadVid():
             ret, frame = cam.read()
             with cam_lock:
                 if ret:
-                    std = frame
+                    std = frame.copy()
     thread1 = threading.Thread(target=update)
     print('thread defined')
     thread1.start()
@@ -270,7 +270,8 @@ def __initCom__(communication):
     
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
     sendBtn = tk.Button(comWindow, text='Send', command=lambda: send("1"))
-    
+    nxtBtn = tk.Button(comWindow, text="next", command= lambda: colourChoice())
+    nxtBtn.place(x=20, y= 120)
     
     
     sendBtn.place(x=30, y= 130)
@@ -293,7 +294,7 @@ def send(str):
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
 receiveLock = threading.Lock()
-incomeSave = {}
+incomeSave = ()
 decoded = {}
 incoming = {}
 def receive(serialInst):
@@ -306,8 +307,9 @@ def receive(serialInst):
                 decoded = incoming.decode('utf-8')
                 with receiveLock:
                     global decodedData, incomingState, incomeSave
-                    incomeSave[n] = str(incoming)
+                    incomeSave = incoming
                     if not decoded == None:
+                        n+=1
                         incomingState = True
                         decodedData = decoded
                     else:
@@ -324,14 +326,11 @@ def update_gui():
         elif incomingState == False: 
             log(text_widget, f'waiting for incoming bytes from arduino')
         checkComponent = decodedData
+    
         
     print(f'decoded data is {incomeSave}')
     
-    if checkComponent == "1":
-        global state
-        state = "connected"
-        tk.messagebox(title = "happy", message = f"working, current state is {state}")
-        
+    
     global loggingbox
     loggingbox.after(1000,update_gui)
 
@@ -360,6 +359,8 @@ def logOpen(communication):
     nxt_btn.place(x=20, y= 90)
     enter_widget.pack()
     
+    
+    
     log(text_widget, "waiting for incoming bytes...")
 
     print('thread about to start')
@@ -367,8 +368,159 @@ def logOpen(communication):
     thread2.start()
     print(f'thread started and thread state is {thread2.is_alive}')
     
+    
     loggingbox.after(10, update_gui)
 
+def coulourReturn(colour):
+    global selectedColours
+    selectedColours = []
+    selectedColours.append(str(colour))
+
+def colourChoice():
+    global comWindow, colourSelect
+    comWindow.destroy()
+    colourSelect = tk.Tk()
+    colourSelect.title('ColourSelect - project CFH')
+    colourSelect.geometry("1000x700")
+    colourSelect.resizable(True, True)
+    
+    selectedColour = tuple("red")
+    
+    red = tk.Button(colourSelect, text='red', command= lambda: detection(selectedColour)) # set command
+    red.place(x=30, y= 100)
+    blue = tk.Button(colourSelect, text= 'blue', command= lambda:detection(tuple("blue"))) # set command
+    blue.place(x=90, y=100)
+    colourSelect.mainloop()
+
+
+
+def colourRange (color):
+    if color == 'red':
+        red_lower_colour = np.array([162,100,100])
+        red_upper_colour = np.array([185,255,255])
+        return red_lower_colour, red_upper_colour
+    elif color == 'blue':
+        blue_lower_colour = np.array([104,50,100])
+        blue_upper_colour = np.array([126,255,255])
+        return blue_lower_colour, blue_upper_colour
+    elif color == 'green':
+        green_lower_colour = np.array([33,50,50])
+        green_upper_colour = np.array([40,255,255])
+        return green_lower_colour, green_upper_colour
+
+def mskCombine(downTotal):
+    setmskComb = len(downTotal) - 1
+    counter = 0
+    savor = {}
+    
+    while setmskComb > 0:
+        if counter != len(downTotal):
+            if counter == 0:
+                savor[counter] = cv2.bitwise_or(downTotal[setmskComb], downTotal[setmskComb-1])
+                
+            else:
+                savor[counter] = cv2.bitwise_or(savor[counter-1],downTotal[setmskComb-1])
+                
+        counter += 1
+        setmskComb -= 1
+
+    finalCombined = savor[counter-1]
+    return finalCombined
+
+def detection(selectedcolour):
+    with cam_lock:
+        global std
+        standard = std
+        icol = 0
+        icol2 = 0
+        icol3 = 0
+        tankDown ={}
+        tankUp = {}
+        
+        maskTotal =()
+        maskSave = {}
+        
+        tankDownTotal = ()
+        tankUpTotal = ()
+        
+        
+        while icol <= len(selectedcolour):
+            
+            tankDown[icol] = colourRange(selectedcolour(icol))(0)
+            tankUp[icol] = colourRange(selectedcolour(icol))(1)
+            
+            tankDownTotal = tankDownTotal + (tankDown[icol],)
+            tankUpTotal = tankUpTotal + (tankUp[icol],)
+            
+            icol += 1
+        
+        bottomHsv = cv2.cvtColor(standard, cv2.COLOR_BGR2HSV)
+        
+        
+        while icol2 <= len(tankDownTotal):
+            maskSave[icol2] = cv2.inRange(bottomHsv, tankDownTotal[icol2], tankUpTotal[icol2])
+            maskTotal = maskTotal + (maskSave[icol2],)
+            icol2 += 1 
+        
+        combined_mask = mskCombine(maskTotal)
+        
+        result = cv2.bitwise_and(standard, mask= combined_mask)
+        
+        videos = [result, combined_mask]
+        
+        if len(selectedcolour) > 1:
+            contours = {}
+            
+            while len(selectedcolour) >= icol3:
+                # draw boxes
+                contours[icol3], _1 = cv2.findContours(tankDown[icol3], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                for contour in contours[icol3]:
+                    global colors, colorReturn, selectedColours
+                    selectedColours[icol3] = cv2.boundingRect(contour)
+                    # sender('red', red1)
+                    if selectedColours[icol3][2]>90 and selectedColours[icol3][3]>90:          
+                        centerred = (2*selectedColours[icol3][0]+selectedColours[icol3][2])//2, (2*selectedColours[icol3][1]+selectedColours[icol3][3])//2
+                        print('')
+                        for redVid in videos:
+                            cv2.rectangle(redVid,(selectedColours[icol3][0],selectedColours[icol3][1]),(selectedColours[icol3][0]+selectedColours[icol3][2],selectedColours[icol3][1]+selectedColours[icol3][3]),(172,0,179),2)
+                            cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
+                icol3 += 1
+                
+        elif len(selectedcolour) == 1:      
+            contours2, _2 = cv2.findContours(tankDown[0], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours2:
+                global colors, colorReturn
+                colour1 = cv2.boundingRect(contour)
+                if colour1[2]>90 and colour1[3]>90:
+                    centerblue = (2*colour1[0]+colour1[2])//2, (2*colour1[1]+colour1[3])//2
+                    # sender('blue', blue1)
+                    for blueVid in videos:
+                        cv2.rectangle(blueVid,(colour1[0],colour1[1]),(colour1[0]+colour1[2],colour1[1] + colour1[3]),(0,255,255),2)
+                        cv2.circle(blueVid, centerblue, 1, (255,0,0) ,thickness=3)
+                        # sender('blue')
+        else:
+            print("this ain't possible")
+            exit()
+
+        # make a box at wanted region
+        for boxes in videos:
+            cv2.rectangle(boxes,(590,410), (690,310), (0,0,255), 2) # change box location depending on target area
+        
+        # center pixel hsv value
+        centerBottomHsv = bottomHsv[360,640]
+        
+        #print(centerBottomHsv)
+        # make a circle
+        cv2.circle(result, (360,640) , 5, (255,0,0), 3)
+        #print(colour)
+        
+        
+    
+    print('entered detection.')    
+
+        
+        
+        
 __initiate__()
 
 killFlag.set()
