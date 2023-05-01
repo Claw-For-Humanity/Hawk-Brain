@@ -308,6 +308,8 @@ def receive(serialInst):
                         pass
             else:
                 pass
+        else:
+            update_gui()
     
 def update_gui():
     global loggingbox
