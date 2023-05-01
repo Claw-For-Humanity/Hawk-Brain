@@ -346,10 +346,11 @@ def logOpen(communication):
     log(text_widget, message=f"")
     if i != 1:
         checkState()
-    
-    i+=1
-    loggingbox.after(300, thread2.start())
-
+        loggingbox.after(300,thread2.start())
+        i+=1
+    else:
+        loggingbox.mainloop()    
+        i+=1
 
 
 __initiate__()
