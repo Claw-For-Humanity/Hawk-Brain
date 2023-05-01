@@ -49,12 +49,12 @@ def __initiate__():
     
     # Select comport and camport
     comList_val = tk.StringVar(window, "Com Port")
-    comList_val.set("Com Port")
+  
     ComLable = tk.Label(window, text='Select Communication Port', font=('Arial', 15))
     ComLable.place(x=ax,y=20)
     
     baud_val = tk.StringVar(window,"Baud Rate")
-    baud_val.set("Baud Rate")
+    
     baudLable = tk.Label(window, text="Select Baud Rate", font=('Arial', 15))  
     baudLable.place(x= ax, y= 80)    
     
@@ -401,6 +401,7 @@ def receiver(portName, bdrate):
             print(f'checker initiated + receiveBool Status is {receiveBool}')
         
         while not stopflag.is_set():
+            # serialInst = serial.Serial(port='portname'  baudrate= 9600)
             # print('checker in progress')
             print(f'{serialInst.in_waiting}')
             if type(serialInst) != type(None):
@@ -415,8 +416,8 @@ def receiver(portName, bdrate):
                     print('waiting for feed')
                 else:
                     print('this is impossible')
+            
             else:
-                
                 print(f'serialInst type is None! encountered problem {serialInst}')
                 error+=1
                 if error == 50:
@@ -486,6 +487,25 @@ def colourRange (color):
         return green_lower_colour, green_upper_colour
 
 
+
+def coulourReturn(colour):
+    global selectedColours
+    selectedColours = []
+    selectedColours.append(str(colour))
+
+def colourChoice():
+    global colourChoiceWin
+    colourChoiceWin = tk.Tk()
+    colourChoiceWin.title('colour choice window')
+    colourChoiceWin.geometry("600x600")
+    colourChoiceWin.resizable(False, False)
+    
+    red = tk.Button(colourChoiceWin, text='red', command= lambda: coulourReturn(red)) # set command
+    red.pack("right")
+    blue = tk.Button(colourChoiceWin, text= 'blue', command= lambda:coulourReturn(blue)) # set command
+    blue.pack("left")
+
+
 def mskCombine(downTotal):
     setmskComb = len(downTotal) - 1
     counter = 0
@@ -507,7 +527,7 @@ def mskCombine(downTotal):
 
 colors = {}
 colorReturn = {}
-selectedColours = {}
+
 def detection(camera, selectedcolour):
     read, standard = camera.read()
     
