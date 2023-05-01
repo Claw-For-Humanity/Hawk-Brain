@@ -221,7 +221,10 @@ def camDisplayer(resolutionX, resolutionY, communication):
     # update the video in a loop
     def update_canvas():
         with cam_lock:
-            pic = std.copy()
+            if not type(std) == None:
+                pic = std.copy()
+            else:
+                pass
     
 
         frame = cv2.cvtColor(pic, cv2.COLOR_BGR2RGB)
@@ -288,12 +291,34 @@ def send():
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
 receiveLock = threading.Lock()
+def receive(serialInst):
+    print('\n\n\nreceive entered\n\n\n')
+    while not killFlag.is_set:
+        if type(serialInst) != type(None):
+            if serialInst.in_waiting > 0:
+                print('feed from arduino detected \n')
+                incoming = serialInst.read(serialInst.in_waiting)
+                decoded = incoming.decode('utf-8')
+                print(f'incoming bytes from Arduino: {decoded} \n')
+                log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
+                with receiveLock:
+                    global decodedData 
+                    if not decoded == None:
+                        decodedData = decoded
+                    else:
+                        print('decoded is None')
+                        pass
+            else:
+                pass
+    
+def update_gui():
+    global loggingbox
+    loggingbox.mainloop()
 
 def logOpen(communication):
-    i = 0
-    comPort, bdRate = communication
+    i = 1
     global state, serialInst, text_widget,loggingbox,thread2
-    serialInst = serial.Serial(port=str(comPort),baudrate= int(bdRate))
+    serialInst = serial.Serial(port=str(communication[0]),baudrate= int(communication[1]))
     
     if serialInst.is_open:
         state = 'serial is open'
@@ -311,47 +336,9 @@ def logOpen(communication):
     
     log(text_widget, "waiting for incoming bytes...")
 
-    print('**********\ncomthread after mainloop')
-
-    def receive(serialInst):
-        print('\n\n\nreceive entered\n\n\n')
-        while True:
-            if type(serialInst) != type(None):
-                if serialInst.in_waiting > 0:
-                    print('feed from arduino detected \n')
-                    incoming = serialInst.read(serialInst.in_waiting)
-                    decoded = incoming.decode('utf-8')
-                    print(f'incoming bytes from Arduino: {decoded} \n')
-                    log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
-                    with receiveLock:
-                        global decodedData 
-                        if not decoded == None:
-                            decodedData = decoded.copy()
-            
-                elif serialInst.in_waiting == 0:
-                    print('waiting for feed')
-
     thread2 = threading.Thread(target=receive, args=(serialInst,))
-
-    def checkState():
-        log(text_widget, "receiving thread is active")
-        print(f'**********\n thread is activated {thread2.is_alive}\n**********')
-        print()
-        send()
-        with receiveLock:
-            global decodedData
-            if decodedData == "1":
-                state = "connected"
-
-    log(text_widget, message=f"")
-    if i != 1:
-        checkState()
-        loggingbox.after(300,thread2.start())
-        i+=1
-    else:
-        loggingbox.mainloop()    
-        i+=1
-
+    thread2.start()
+    loggingbox.after(10, update_gui)
 
 __initiate__()
 print('program done')
