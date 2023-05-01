@@ -335,7 +335,7 @@ def logOpen(communication):
     print()
     send()
     with receiveLock:
-        global decodedData, state
+        global decodedData
         if decodedData == "1":
             state = "connected"
         
