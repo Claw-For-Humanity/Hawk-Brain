@@ -288,6 +288,7 @@ def send():
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
 receiveLock = threading.Lock()
+
 def logOpen(communication):
     comPort, bdRate = communication
     global state, serialInst, text_widget,loggingbox,thread2
@@ -312,6 +313,7 @@ def logOpen(communication):
     print('**********\ncomthread after mainloop')
 
     def receive(serialInst):
+        print('\n\n\nreceive entered\n\n\n')
         while True:
             if type(serialInst) != type(None):
                 if serialInst.in_waiting > 0:
