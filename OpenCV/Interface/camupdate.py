@@ -260,14 +260,31 @@ def __initCom__(communication):
     stateInfo = tk.Label(comWindow, text=f'current state is {state}')
     stateInfo.place(x=30, y=50)
 
+    if state == "connected":
+        nxtBtn = tk.Button(comWindow, text= "next", command=lambda: detect())
+        nxtBtn.place(x=30, y= 170)
+    
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
-
+    sendBtn = tk.Button(comWindow, text='Send', command=lambda: send())
+    
+    sendBtn.place(x=30, y= 130)
     cntBtn.place(x= 30, y= 90)
+    camWindow.mainloop()
 
 
 def log(widget, message, level = 'INFO'):
     tag = level.upper()
     widget.insert(tk.END, message + "\n", tag)
+
+
+def send():
+    global serialInst
+    serialInst.write("1".encode())
+    print('sent')
+    print(f'\ncurrent state of thread1 is {thread1.is_alive}\n')
+    print(f'\ncurrent state of thread2 is {thread2.is_alive}\n')
+    log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
+    
 
 def logOpen(communication):
     comPort, bdRate = communication
@@ -292,42 +309,46 @@ def logOpen(communication):
     time.sleep(3)
     # loggingbox.mainloop
     loggingbox.after(300, comThread)
-    
 
+receiveLock = threading.Lock()
 def comThread():
-    log(text_widget, "receiving thread is active")
-    loggingbox.mainloop()
+    i=0
+    print('comthread after mainloop')
     global serialInst,thread2
     def receive(serialInst):
-        while not killFlag.is_set():
+        while True:
             if type(serialInst) != type(None):
-                    if serialInst.in_waiting > 0:
-                        print('feed from arduino detected \n')
-                        incoming = serialInst.read(serialInst.in_waiting)
-                        decoded = incoming.decode('utf-8')
-                        print(f'incoming bytes from Arduino: {decoded} \n')
-                        log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
-                        
-                    elif serialInst.in_waiting == 0:
-                        print('waiting for feed')
-    thread2 = threading.Thread(target=receive, args=(serialInst))
+                if serialInst.in_waiting > 0:
+                    print('feed from arduino detected \n')
+                    incoming = serialInst.read(serialInst.in_waiting)
+                    decoded = incoming.decode('utf-8')
+                    print(f'incoming bytes from Arduino: {decoded} \n')
+                    log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
+                    with receiveLock:
+                        global decodedData 
+                        if decoded > 0:
+                            decodedData = decoded
+            
+                elif serialInst.in_waiting == 0:
+                    print('waiting for feed')
+
+    thread2 = threading.Thread(target=receive, args=(serialInst,))
     thread2.start()
+    log(text_widget, "receiving thread is active")
     print(f'**********\n thread is activated {thread2.is_alive}\n**********')
-    time.sleep(3)
-    serialInst.write("1".encode())
-    log(text_widget, f"sent, thread state is {thread2.is_alive}")
-    time.sleep(1)
-    serialInst.write("1".encode())
-    time.sleep(1)
-    serialInst.write("1".encode())
-    time.sleep(1)
-    serialInst.write("1".encode())
-    time.sleep(1)
-    serialInst.write("1".encode())
-    print('sent to arduino')
-    
-    
+    print()
+    send()
+    with receiveLock:
+        global decodedData, state
+        if decodedData == "1":
+            state = "connected"
         
+    log(text_widget, message=f"")
+    
+def detection():
+    
+
+
 __initiate__()
 print('program done')
 killFlag.set()
