@@ -290,6 +290,7 @@ def send():
 receiveLock = threading.Lock()
 
 def logOpen(communication):
+    i = 0
     comPort, bdRate = communication
     global state, serialInst, text_widget,loggingbox,thread2
     serialInst = serial.Serial(port=str(comPort),baudrate= int(bdRate))
@@ -331,20 +332,23 @@ def logOpen(communication):
                     print('waiting for feed')
 
     thread2 = threading.Thread(target=receive, args=(serialInst,))
-    
-    log(text_widget, "receiving thread is active")
-    print(f'**********\n thread is activated {thread2.is_alive}\n**********')
-    print()
-    send()
-    with receiveLock:
-        global decodedData
-        if decodedData == "1":
-            state = "connected"
-        
+
+    def checkState():
+        log(text_widget, "receiving thread is active")
+        print(f'**********\n thread is activated {thread2.is_alive}\n**********')
+        print()
+        send()
+        with receiveLock:
+            global decodedData
+            if decodedData == "1":
+                state = "connected"
+
     log(text_widget, message=f"")
-
+    if i != 1:
+        checkState()
+    
+    i+=1
     loggingbox.after(300, thread2.start())
-
 
 
 
