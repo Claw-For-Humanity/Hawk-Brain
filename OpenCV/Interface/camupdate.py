@@ -244,7 +244,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
     comCall = tk.Button(camWindow, text='next', command=lambda: __initCom__(communication))
     comCall.place(x= 400, y= 300)
 
-    
+incomingState = False
 def __initCom__(communication):
     global camWindow,state,comWindow
     
@@ -264,19 +264,14 @@ def __initCom__(communication):
     stateInfo.place(x=30, y=50)
 
     if state == "connected":
+        print('current state is "connected"')
         nxtBtn = tk.Button(comWindow, text= "next", command=lambda: detect())
         nxtBtn.place(x=30, y= 170)
     
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
-    sendBtn = tk.Button(comWindow, text='Send', command=lambda: send())
+    sendBtn = tk.Button(comWindow, text='Send', command=lambda: send("1"))
     
-    if state == "connected":
-        with receiveLock:
-            global decodedData, incomingState
-            if incomingState == True:
-                log(text_widget, f'incoming bytes from arduino {decodedData}')
-            elif incomingState == False: 
-                log(text_widget, f'waiting for incoming bytes from arduino')
+    
     
     sendBtn.place(x=30, y= 130)
     cntBtn.place(x= 30, y= 90)
@@ -290,61 +285,56 @@ def log(widget, message, level = 'INFO'):
     widget.insert(tk.END, message + "\n", tag)
 
 
-def send():
+def send(str):
     global serialInst
-    serialInst.write("1".encode())
+    serialInst.write(f"{str}".encode())
     print(f'\ncurrent state of thread1 is {thread1.is_alive}\n')
     print(f'\ncurrent state of thread2 is {thread2.is_alive}\n')
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
 receiveLock = threading.Lock()
-receiveI = None
-
-def receive(serialInst,text_widget):
-    global receiveI
-    receiveI = 0
-    print('\n\n\nreceive entered\n\n\n')
-    print(f'killflag is {killFlag}')
+incomeSave = {}
+decoded = {}
+incoming = {}
+def receive(serialInst):
+    n = 0
     while not killFlag.is_set():
-        receiveI+=1
         if type(serialInst) != type(None):
             if serialInst.in_waiting > 0:
                 print('feed from arduino detected \n')
                 incoming = serialInst.read(serialInst.in_waiting)
                 decoded = incoming.decode('utf-8')
-                log(text_widget, message=f"incoming bytes from Arduino: {decoded}")
                 with receiveLock:
-                    global decodedData, incomingState 
+                    global decodedData, incomingState, incomeSave
+                    incomeSave[n] = str(incoming)
                     if not decoded == None:
                         incomingState = True
                         decodedData = decoded
                     else:
                         incomingState = False
                         decodedData = None
+                n+=1
                         
         
 def update_gui():
-    print(f'receiveI is {receiveI}')
-    def checkState():
+    with receiveLock:
+        global decodedData, incomingState
+        if incomingState == True:
+            log(text_widget, f'incoming bytes from arduino {decodedData}')
+        elif incomingState == False: 
+            log(text_widget, f'waiting for incoming bytes from arduino')
+        checkComponent = decodedData
+        
+    print(f'decoded data is {incomeSave}')
+    
+    if checkComponent == "1":
         global state
-        print('check state entered')
-        with receiveLock:
-            global decodedData
-            print(f'decodedData is {decodedData}')
-            if not type(decodedData) == None:                
-                if decodedData == "1":
-                    state = "connected"
-                    
-    if not receiveI == None:
-        print('checkstate entered')
-        checkState()
+        state = "connected"
+        tk.messagebox(title = "happy", message = f"working, current state is {state}")
+        
     global loggingbox
     loggingbox.after(1000,update_gui)
 
-def message(str):
-    global serialInst
-    serialInst.write(f'{str}'.encode())
-    log(text_widget, f'sent {str.encode()}')
     
 def logOpen(communication):
     print('entered logOpen')
@@ -366,26 +356,21 @@ def logOpen(communication):
     text_widget = tk.Text(loggingbox, height=20, width=80)
     text_widget.pack()
     enter_widget = tk.Entry(loggingbox, width= 18)
-    nxt_btn = tk.Button(loggingbox, text='send', command=lambda: message(enter_widget.get()), width= 2)
+    nxt_btn = tk.Button(loggingbox, text='send', command=lambda: send(enter_widget.get()), width= 2)
     nxt_btn.place(x=20, y= 90)
     enter_widget.pack()
     
     log(text_widget, "waiting for incoming bytes...")
 
     print('thread about to start')
-    thread2 = threading.Thread(target=receive, args=(serialInst,text_widget,))
+    thread2 = threading.Thread(target=receive, args=(serialInst,))
     thread2.start()
     print(f'thread started and thread state is {thread2.is_alive}')
-    print(f'receiveI is {receiveI}')
     
     loggingbox.after(10, update_gui)
 
 __initiate__()
-print('program done')
+
 killFlag.set()
-print(f'killflag is set {killFlag.is_set}')
 thread1.join()
 thread2.join()
-print('thread join')
-
-print(f'killflag is set {killFlag.is_set}')
