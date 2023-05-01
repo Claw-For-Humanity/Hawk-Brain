@@ -10,6 +10,8 @@ import threading
 import numpy as np
 
 
+decodedData = None
+
 def launcher():
     global root
     
@@ -283,44 +285,58 @@ def log(widget, message, level = 'INFO'):
 def send():
     global serialInst
     serialInst.write("1".encode())
-    print('sent')
     print(f'\ncurrent state of thread1 is {thread1.is_alive}\n')
     print(f'\ncurrent state of thread2 is {thread2.is_alive}\n')
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
 receiveLock = threading.Lock()
-def receive(serialInst):
+receiveI = None
+def receive(serialInst,loggingbox):
+    global receiveI
+    receiveI = 0
     print('\n\n\nreceive entered\n\n\n')
-    while not killFlag.is_set:
+    print(f'killflag is {killFlag}')
+    while not killFlag.is_set():
+        receiveI+=1
         if type(serialInst) != type(None):
             if serialInst.in_waiting > 0:
                 print('feed from arduino detected \n')
                 incoming = serialInst.read(serialInst.in_waiting)
                 decoded = incoming.decode('utf-8')
-                print(f'incoming bytes from Arduino: {decoded} \n')
-                log(text_widget, message=f'incoming bytes from Arduino: {decoded}')
+                loggingbox.after(10, lambda: log(text_widget, message=f'incoming bytes from Arduino: {decoded}'))
                 with receiveLock:
                     global decodedData 
                     if not decoded == None:
                         decodedData = decoded
-                    else:
-                        print('decoded is None')
-                        pass
-            else:
-                pass
-    
+                        tk.messagebox.showinfo(title ="good", message = f'decoded set to {decodedData}')
+        
 def update_gui():
+    print(f'receiveI is {receiveI}')
+    def checkState():
+        global state
+        print('check state entered')
+        with receiveLock:
+            global decodedData
+            print(f'decodedData is {decodedData}')
+            if not type(decodedData) == None:                
+                if decodedData == "1":
+                    state = "connected"
+                    
+    if not receiveI == None:
+        print('checkstate entered')
+        checkState()
     global loggingbox
-    loggingbox.mainloop()
+    loggingbox.after(1000,update_gui)
 
 def logOpen(communication):
-    i = 1
+    
+                
+    print('entered logOpen')
     global state, serialInst, text_widget,loggingbox,thread2
     serialInst = serial.Serial(port=str(communication[0]),baudrate= int(communication[1]))
     
     if serialInst.is_open:
         state = 'serial is open'
-    
     else:
         state = 'serial is not open'
         tk.messagebox.showinfo(title = 'warning', message = 'serial cannot be opened. Please check the port')
@@ -334,8 +350,13 @@ def logOpen(communication):
     
     log(text_widget, "waiting for incoming bytes...")
 
-    thread2 = threading.Thread(target=receive, args=(serialInst,))
+    print('thread about to start')
+    thread2 = threading.Thread(target=receive, args=(serialInst,loggingbox))
     thread2.start()
+    print(f'thread started and thread state is {thread2.is_alive}')
+    
+    print(f'receiveI is {receiveI}')
+    
     loggingbox.after(10, update_gui)
 
 __initiate__()
