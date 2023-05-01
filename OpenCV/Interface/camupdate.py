@@ -287,10 +287,10 @@ def send():
     print(f'\ncurrent state of thread2 is {thread2.is_alive}\n')
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
     
-
+receiveLock = threading.Lock()
 def logOpen(communication):
     comPort, bdRate = communication
-    global state, serialInst, text_widget,loggingbox
+    global state, serialInst, text_widget,loggingbox,thread2
     serialInst = serial.Serial(port=str(comPort),baudrate= int(bdRate))
     
     if serialInst.is_open:
@@ -308,15 +308,9 @@ def logOpen(communication):
     text_widget.pack()
     
     log(text_widget, "waiting for incoming bytes...")
-    time.sleep(3)
-    # loggingbox.mainloop
-    loggingbox.after(300, comThread)
 
-receiveLock = threading.Lock()
-def comThread():
-    i=0
-    print('comthread after mainloop')
-    global serialInst,thread2
+    print('**********\ncomthread after mainloop')
+
     def receive(serialInst):
         while True:
             if type(serialInst) != type(None):
@@ -335,7 +329,7 @@ def comThread():
                     print('waiting for feed')
 
     thread2 = threading.Thread(target=receive, args=(serialInst,))
-    thread2.start()
+    
     log(text_widget, "receiving thread is active")
     print(f'**********\n thread is activated {thread2.is_alive}\n**********')
     print()
@@ -346,9 +340,10 @@ def comThread():
             state = "connected"
         
     log(text_widget, message=f"")
-    
 
-    
+    loggingbox.after(300, thread2.start())
+
+
 
 
 __initiate__()
