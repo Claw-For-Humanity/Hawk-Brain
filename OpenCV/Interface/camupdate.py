@@ -5,9 +5,9 @@ import cv2
 import serial.tools.list_ports
 import serial
 from PIL import Image, ImageTk
-import subprocess
 import threading
 import numpy as np
+import struct
 
 
 decodedData = None
@@ -26,8 +26,6 @@ def launcher():
     root.geometry("300x300")
     
     root.after(1000, __initiate__)  # Call __initiate__() through root.after()
-    root.mainloop()
-
 
 def __initiate__(): # returns camport, comport and baudrate
     # global root
@@ -144,7 +142,7 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     camWindow.title("Camera Setting")
     camWindow.option_add("*Font","Ariel 15")
     camWindow.geometry("1000x500")
-    camWindow.resizable(False, False)
+    camWindow.resizable(True, True)
     
     # entry
     subTitle = tk.Label(camWindow, text='Width x Height for camera')
@@ -242,7 +240,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
     update_canvas()
     
     comCall = tk.Button(camWindow, text='next', command=lambda: __initCom__(communication))
-    comCall.place(x= 400, y= 300)
+    comCall.place(x= 400, y= 150)
 
 incomingState = False
 def __initCom__(communication):
@@ -286,9 +284,10 @@ def log(widget, message, level = 'INFO'):
     widget.insert(tk.END, message + "\n", tag)
 
 
-def send(str):
+def send(data):
     global serialInst
-    serialInst.write(f"{str}".encode())
+    packed = struct.pack('>B' ,int(data))
+    serialInst.write(packed)
     print(f'\ncurrent state of thread1 is {thread1.is_alive}\n')
     print(f'\ncurrent state of thread2 is {thread2.is_alive}\n')
     log(text_widget, f"serialInst inwaiting is {serialInst.in_waiting}")
@@ -303,8 +302,8 @@ def receive(serialInst):
         if type(serialInst) != type(None):
             if serialInst.in_waiting > 0:
                 print('feed from arduino detected \n')
-                incoming = serialInst.read(serialInst.in_waiting)
-                decoded = incoming.decode('utf-8')
+                incoming = serialInst.read(1)
+                decoded = struct.unpack('>B', incoming)
                 with receiveLock:
                     global decodedData, incomingState, incomeSave
                     incomeSave = incoming
@@ -325,7 +324,6 @@ def update_gui():
             log(text_widget, f'incoming bytes from arduino {decodedData}')
         elif incomingState == False: 
             log(text_widget, f'waiting for incoming bytes from arduino')
-        checkComponent = decodedData
     
         
     print(f'decoded data is {incomeSave}')
