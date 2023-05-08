@@ -11,8 +11,6 @@ serialInst = serial.Serial(port='/dev/cu.usbmodem1101', baudrate= 9600)
 killFlag = threading.Event()
 
 incomingState = False
-
-
     
 def log(widget, message, level = 'INFO'):
     tag = level.upper()
@@ -20,9 +18,8 @@ def log(widget, message, level = 'INFO'):
 
 def send(data):
     global serialInst
-    packed = struct.pack('>B', int(data))
-    print(f'packed value is "{packed}" and it is written')
-    serialInst.write(packed)
+    print(f'\n{data.encode} is written\n')
+    serialInst.write(f"{data}".encode())
     
     
 receiveLock = threading.Lock()
@@ -34,16 +31,11 @@ def receive(serialInst):
         
         if type(serialInst) != type(None):
             if serialInst.in_waiting > 0:
-                print('feed from arduino detected \n')
-                incoming = serialInst.read(1)
-                byte_value = int.from_bytes(incoming, byteorder='big')
-                int_value = byte_value << 8
-                print(f'incoming data is {incoming}, n is {n}')
-                decoded = byte_value
-                # decoded = struct.unpack('<B', incoming)
+                data = serialInst.readline().decode().strip() # Read data from the serial port
+                print("Received data:", data)
+                decoded = data
                 with receiveLock:
-                    global decodedData, incomingState, incomeSave
-                    incomeSave = incoming
+                    global decodedData, incomingState
                     if not decoded == None:
                         n+=1
                         incomingState = True
@@ -98,7 +90,8 @@ if serialInst.is_open:
     logging()
     
     killFlag.set()
-    print(f'killfla is set, killflag status is {killFlag.is_set}')
+    print(f'killflag is set, killflag status is {killFlag.is_set}')
+    exit()
 else:
     print('error connection')
     exit()
