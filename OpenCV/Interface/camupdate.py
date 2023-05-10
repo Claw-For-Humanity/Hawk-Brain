@@ -11,7 +11,7 @@ import struct
 
 thread1 = None
 thread2 = None
-
+thread3 = None
 decodedData = None
 
 
@@ -242,6 +242,9 @@ def camDisplayer(resolutionX, resolutionY, communication):
     comCall.place(x= 400, y= 150)
 
 incomingState = False
+stateKill = threading.Event()
+checkStateLock = threading.Lock()
+state = None
 
 def __initCom__(communication):
     global camWindow,state,comWindow
@@ -258,16 +261,31 @@ def __initCom__(communication):
     portInfo = tk.Label(comWindow, text=f'comport connection check // selected comport is {communication[0]} // selected baud rate is {communication[1]}')
     portInfo.place(x=30, y=15)
 
-    stateInfo = tk.Label(comWindow, text=f'current state is {state}')
-    stateInfo.place(x=30, y=50)
+    def checkState(comWindow):
+        while not stateKill.is_set():
+            with checkStateLock:
+                global state
+                stateInfo = tk.Label(comWindow, text=f'current state is {state}')
+                stateInfo.place(x=30, y=50)
+                print(f'state is "{state}"')
+                if state == 'serial is open':
+                    Pass = tk.Button(comWindow, text='Next')
+                    Pass.place(x=30, y=90)
+                    break
+            comWindow.update()  # update the GUI to show changes
+            time.sleep(0.1)  # wait a short time before checking again
+        
+
+
+    thread3 = threading.Thread(target= checkState, args= (comWindow,))
+    thread3.start()
+    print(f'\n\nthread3 stat is {thread3.is_alive()}\n\n')
     
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
-    
-    if state == 'connected':
-        skip = tk.Button(comWindow, text='skip', command=lambda: colourSelect())
-    
     cntBtn.place(x= 30, y= 90)
-    camWindow.mainloop()
+    comWindow.mainloop()
+    
+    
 
 def log(widget, message, level = 'INFO'):
     tag = level.upper()
@@ -275,8 +293,9 @@ def log(widget, message, level = 'INFO'):
 
 
 def send(data):
-    global serialInst
-    print(f'\n{data.encode} is written\n')
+    global serialInst, sent
+    sent = data
+    print(f'\n{data.encode()} is written\n')
     serialInst.write(f"{data}".encode())
     
     
@@ -301,24 +320,39 @@ def update_gui():
         global decodedData, incomingState, loggingbox
         if incomingState == True:
             log(text_widget, f'incoming bytes from arduino {decodedData}')
+            if sent == decodedData:
+                print('matching data')
+                with checkStateLock:
+                    global state
+                    state = 'connected'
+            else:
+                print('line 321 // something is weird')
+                print(f'[trace] sent is {sent}')
+                print(f'[trace] decoded data is {decodedData}')
+                print(f'state is {state}')
+            
         elif incomingState == False: 
             log(text_widget, f'waiting for incoming bytes from arduino')
 
         loggingbox.after(1000, update_gui) 
 
 logOpeni = 0
+
 def logOpen(communication):
-    global state, serialInst, text_widget,loggingbox,thread2, logOpeni
+    global serialInst, text_widget,loggingbox,thread2, logOpeni
     serialInst = serial.Serial(port=str(communication[0]),baudrate= int(communication[1]))
     
     if serialInst.is_open:
-        state = 'serial is open'
+        with checkStateLock:
+            global state
+            state = 'serial is open'
     
     else:
-        state = 'serial is not open'
-        tk.messagebox.showinfo(title = 'warning', message = 'serial cannot be opened. Please check the port')
-        return
-    
+        with checkStateLock:
+            state = 'serial is not open'
+            tk.messagebox.showinfo(title = 'warning', message = 'serial cannot be opened. Please check the port')
+            return
+        
     loggingbox = tk.Tk()
     loggingbox.title('logger')
 
@@ -336,18 +370,7 @@ def logOpen(communication):
     thread2 = threading.Thread(target=receive, args=(serialInst,))
     thread2.start()
     log(text_widget, f"thread called and thread state is {thread2.is_alive}")
-    
-    if logOpeni == 0 and serialInst.in_waiting>0:
-        test_data = "8"
-        print(f'type of decoded data is {type(decodedData)}')
-        print(f'type of test data is {type(test_data)}')
         
-        send(test_data)
-        with receiveLock:
-            if decodedData == int(test_data):
-                print('matching data')
-                state = 'connected'
-        logOpeni += 1
     loggingbox.after(10, update_gui)
  
 
@@ -358,7 +381,9 @@ def colourSelect():
 __initiate__()
 
 killFlag.set()
-if thread1!= None and thread2!=None:
+stateKill.set()
+if thread1!= None and thread2!=None and thread3!= None:
     thread1.join()
     thread2.join()
+    thread3.join()
 exit()
