@@ -133,8 +133,10 @@ def _detect_(camera):
     # combine masks
     combined_mask = cv2.bitwise_or(bottom_red_mask,cv2.bitwise_or(bottom_blue_mask,bottom_green_mask))
 
+
+
     # create result
-    result = cv2.bitwise_and(standard, standard, mask= combined_mask)
+    result = cv2.bitwise_and(standard, standard)
 
     # create videos dictionary
     videos = [result, combined_mask]    
@@ -203,7 +205,7 @@ def _detect_(camera):
                         # initialize / work
 def __initialize__():
     print('cam port')
-    __startPort__()
+    # __startPort__()
     print('startport done')
        
     
@@ -251,6 +253,7 @@ def __work__():
         # show video // result displays with colour // combined mask displays white and black
         cv2.imshow('result', result)
         cv2.imshow('combined mask', combined_mask)
+        # cv2.imshow(' ')
         
 
 
