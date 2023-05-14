@@ -22,6 +22,14 @@ selectedColour = None
 img = None
 imgtk = None
 tkmg = None
+incomingState = False
+stateKill = threading.Event()
+checkStateLock = threading.Lock()
+receiveLock = threading.Lock()
+state = None
+cam_lock = threading.Lock()
+std = None
+killFlag = threading.Event()
 
 
 def launcher():
@@ -38,6 +46,7 @@ def launcher():
     root.geometry("300x300")  # Call __initiate__() through root.after()
     root.after(3000, __initiate__)
     root.mainloop()
+
 
 def __initiate__(): # returns camport, comport and baudrate
     
@@ -119,6 +128,7 @@ def __initiate__(): # returns camport, comport and baudrate
     btn.place(x= defaultLocX+10, y= 200)
     
     window.mainloop()
+    
         
 def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts camport and globalize captured cam
     
@@ -130,7 +140,7 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
             comPort = HWID[i]
             break
     
-    global window
+    global window, comPort, bdrate
     communication = comPort,bdrate
     window.destroy()
     
@@ -171,12 +181,9 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     
     camWindow.mainloop()
 
-cam_lock = threading.Lock()
-
-std = None
-killFlag = threading.Event()
 
 def threadVid():
+    
     global thread1
     print('thread entered')
     def update():
@@ -191,7 +198,6 @@ def threadVid():
     thread1.start()
     print('thread started')
     print(f'thread state is {thread1.is_alive}')
-
 
 def camDisplayer(resolutionX, resolutionY, communication):
     print('entered camdisplayer')
@@ -250,10 +256,6 @@ def camDisplayer(resolutionX, resolutionY, communication):
     comCall = tk.Button(camWindow, text='next', command=lambda: __initCom__(communication))
     comCall.place(x= 400, y= 150)
 
-incomingState = False
-stateKill = threading.Event()
-checkStateLock = threading.Lock()
-state = None
 
 def __initCom__(communication):
     global camWindow,state,comWindow
@@ -294,7 +296,6 @@ def __initCom__(communication):
     cntBtn.place(x= 30, y= 90)
     comWindow.mainloop()
     
-    
 
 def log(widget, message, level = 'INFO'):
     tag = level.upper()
@@ -305,10 +306,8 @@ def send(data):
     global serialInst, sent
     sent = data
     print(f'\n{data.encode()} is written\n')
-    serialInst.write(f"{data}".encode())
-    
-    
-receiveLock = threading.Lock()
+    serialInst.write(f"{data}".encode())    
+
 
 def receive(serialInst):
     while not killFlag.is_set():
@@ -323,6 +322,7 @@ def receive(serialInst):
                     else:
                         incomingState = False
                         decodedData = None
+
                         
 def update_gui():
     with receiveLock:
@@ -345,10 +345,9 @@ def update_gui():
 
         loggingbox.after(1000, update_gui) 
 
-logOpeni = 0
 
 def logOpen(communication):
-    global serialInst, text_widget,loggingbox,thread2, logOpeni
+    global serialInst, text_widget,loggingbox,thread2
     serialInst = serial.Serial(port=str(communication[0]),baudrate= int(communication[1]))
     
     if serialInst.is_open:
@@ -381,8 +380,8 @@ def logOpen(communication):
     log(text_widget, f"thread called and thread state is {thread2.is_alive}")
         
     loggingbox.after(10, update_gui)
- 
- 
+  
+
 def _detection_():
     global red_lower_colour, red_upper_colour, blue_lower_colour, blue_upper_colour
     red_lower_colour = np.array([162,100,100])
@@ -441,6 +440,7 @@ def _detection_():
             global img
             img = Image.fromarray(frame)
  
+
 def detectionInit():
     global thread6
     resolutionX = 1280
@@ -480,6 +480,7 @@ def detectionInit():
     print('end of detectioninit -- detection working // thread6 state is {}'.format(thread6.is_alive()))
     displayWindow.mainloop()
  
+
 def colourInterface():
     
     # create window for colourselection
@@ -525,19 +526,21 @@ def colourInterface():
     nxtBtn.place(x= 130, y=100)
     
     colourWindow.mainloop()
-        
-def colourSelect():
-    print('colourselect')
-        
+
+
+def jsonMaker():
+    global
+
 __initiate__()
 
 killFlag.set()
 stateKill.set()
 threadKill.set()
-if thread1!= None and thread2!=None and thread3!= None and thread5 != None and thread6 != None:
+
+if thread1!= None and thread2!=None and thread3!= None != None and thread6 != None:
     thread1.join()
     thread2.join()
     thread3.join()
-    thread5.join()
     thread6.join()
+
 exit()
