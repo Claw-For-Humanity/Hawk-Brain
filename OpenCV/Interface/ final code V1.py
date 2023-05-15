@@ -140,7 +140,6 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
             comPort = HWID[i]
             break
     
-    global window, comPort, bdrate
     communication = comPort,bdrate
     window.destroy()
     
@@ -528,8 +527,6 @@ def colourInterface():
     colourWindow.mainloop()
 
 
-def jsonMaker():
-    global
 
 __initiate__()
 
