@@ -1,3 +1,4 @@
+# implement location detection and json
 import time
 import tkinter as tk
 from tkinter import messagebox
