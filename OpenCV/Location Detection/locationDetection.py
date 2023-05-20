@@ -15,7 +15,7 @@ actual_redbox = None
 frontCamPort = 0
 cameraAngle = 130
 frontVid = None
-
+threadKill = threading.Event()
 
 
 def __initializeCam__():
@@ -52,21 +52,6 @@ def __initializeCam__():
 serialComPort = 3
 serialInst = None # dont touch this
 
-def __startPort__():
-    print('entered startport')
-    global serialComPort
-    global serialInst
-
-    serialInst = serial.Serial()
-    serialInst.port = "COM4"
-    serialInst.open()
-    if not serialInst.is_open:
-        print('no serial com detected. change port')
-        return
-    else:
-        pass
-    print('finished startport without problem')
-
 
 
 # colour
@@ -96,6 +81,7 @@ centerXY = (0,0,0,0)
 greenerReturn = None
 blueerReturn = None
 redrReturn = None
+selectedColour = {'red': False, 'blue': False}
 
 # colour range
 red_lower_colour = np.array([162,100,100])
@@ -112,11 +98,11 @@ actual_redbox = 243,243
 actual_bluecone = 210,330
 actual_greenlight = 100,100
 
-
+objectRed = None
+objectBlue = None
 
 def _detect_(camera):  
-    global combined_mask
-    global result
+    global thread1, combined_mask, result
     # video input
     read, standard = camera.read()
 
@@ -138,34 +124,35 @@ def _detect_(camera):
     # draw boxes
     contours1, _1 = cv2.findContours(bottom_red_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours1:
-        global red1
-        global redReturn
+        global red1, redrReturn, objectRed
         red1 = cv2.boundingRect(contour)
         rx, ry, rw, rh = red1
-        objectRed = [(rx, ry), (rx + rw, ry), (rx+ rw, ry+rh),(rx, ry+rh)]
         # sender('red', red1)
         if red1[2]>90 and red1[3]>90:          
             centerred = (2*red1[0]+red1[2])//2, (2*red1[1]+red1[3])//2
             print('')
             for redVid in videos:
-                cv2.rectangle(redVid,(red1[0],red1[1]),(red1[0]+red1[2],red1[1]+red1[3]),(172,0,179),2)
-                cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
-                # sender('red')
+                if selectedColour['red'] == True:
+                    cv2.rectangle(redVid,(red1[0],red1[1]),(red1[0]+red1[2],red1[1]+red1[3]),(172,0,179),2)
+                    cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
+                    objectRed = ((rx+rw)/2,(ry+rh)/2)
+                else:
+                    objectRed = None
                 
     contours2, _2 = cv2.findContours(bottom_blue_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours2:
-        global blue1
-        global blueerReturn
+        global blue1, blueerReturn, objectBlue
         blue1 = cv2.boundingRect(contour)
         bx, by, bw, bh = blue1
-        objectBlue = [(bx, by), (bx + bw, by), (bx+ bw, by+bh),(bx, by+bh)]
         if blue1[2]>90 and blue1[3]>90:
             centerblue = (2*blue1[0]+blue1[2])//2, (2*blue1[1]+blue1[3])//2
-            # sender('blue', blue1)
             for blueVid in videos:
-                cv2.rectangle(blueVid,(blue1[0],blue1[1]),(blue1[0]+blue1[2],blue1[1] + blue1[3]),(0,255,255),2)
-                cv2.circle(blueVid, centerblue, 1, (255,0,0) ,thickness=3)
-                # sender('blue')
+                if selectedColour['blue'] == True:
+                    cv2.rectangle(blueVid,(blue1[0],blue1[1]),(blue1[0]+blue1[2],blue1[1] + blue1[3]),(0,255,255),2)
+                    cv2.circle(blueVid, centerblue, 1, (255,0,0) ,thickness=3)
+                    objectBlue = ((bx+bw)/2, (by+bh)/2)
+                else:
+                    objectBlue = None
         
     objectX = 700
     objectY = 0
@@ -173,25 +160,42 @@ def _detect_(camera):
     objectH = 720 
     
     
-    objectPts = [(objectX,objectY),(objectX+objectW, objectY),(objectX+objectW,objectY,objectH),(objectX,objectY+objectH)]
+    objectPts = np.array([(objectX,objectY),(objectX+objectW, objectY),(objectX+objectW,objectY+objectH),(objectX,objectY+objectH)])
+    
     def checker():
-        while True:
-            for pt in  objectRed:
-                    if cv2.pointPolygonTest(objectPts, pt, False) < 0:
-                        state = False
+        while not threadKill.is_set():
+            if type(objectBlue) != type(None):
+                if cv2.pointPolygonTest(objectPts, objectRed, False) < 0:
+                    blueState = False
+                else:
+                    blueState = True
+            elif type(objectBlue) == type(None):
+                print('type none blue')
+            else: 
+                print('not checking blue')
+            
+            if type(objectRed) != type(None):
+                    if cv2.pointPolygonTest(objectPts, objectRed, False) < 0:
+                        redState = False
                     else:
-                        state = True
-            print(state)
+                        redState = True  
+            elif type(objectRed) == type(None):
+                print('type none red')
+            else:
+                print('not checking red')
+                
     thread1 = threading.Thread(target= checker) 
     thread1.start()                       
                         
     # make a box at center
     for boxes in videos:
         cv2.rectangle(boxes,(590,410), (690,310), (0,0,255), 2) 
-                            #x, y , x+w, y+h
+                            # x, y , x+w, y+h
+    # target area box
     cv2.rectangle(result, (700,0), (900,720),(0,255,0),3)
     
-    
+    # center circle
+    cv2.circle(result, (800,360),5, (255,0,0), 3)
     
     # center pixel hsv value
     centerBottomHsv = bottomHsv[640,360]
@@ -202,10 +206,6 @@ def _detect_(camera):
     #print(colour)
 
     
-
-
-
-
 
                         # initialize / work
 def __initialize__():
@@ -269,6 +269,11 @@ def __work__():
 
 # start from here
 __initialize__()
+threadKill.set()
+if thread1 is not None:
+    thread1.join()
+    exit()
+    
 
 
 # color selection
