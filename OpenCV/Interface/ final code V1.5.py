@@ -1,6 +1,7 @@
 # implement location detection and json
 import time
 import tkinter as tk
+from tkinter import *
 from tkinter import messagebox
 import cv2
 import serial.tools.list_ports
@@ -40,6 +41,10 @@ objRed = None
 objectRed = None
 objectBlue = None
 readyDetection = False
+ptBlue = None
+ptRed = None
+distanceLock = threading.Lock()
+boxCheckStat = False
 
 def launcher():
     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
@@ -389,8 +394,7 @@ def send_safety(data):
     serialInst.write(f"{data}".encode())
     time.sleep(4)
 
-ptBlue = None
-ptRed = None
+
 def _detection_():
     global red_lower_colour, red_upper_colour, blue_lower_colour, blue_upper_colour, thread4, readyDetection
     red_lower_colour = np.array([162,100,100])
@@ -426,7 +430,7 @@ def _detection_():
                 pass
             
         def calcLineCenter(point1, point2):
-            center = (int(point1[0] + point2[0]),int(point2[1] + point2[1] + 10))
+            center = (int((point1[0] + point2[0])/2),int((point2[1] + point2[1])/2 + 10))
             return center
             
         with camLock:
@@ -442,7 +446,6 @@ def _detection_():
         contourRed, _1 = cv2.findContours(bottom_red_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         for contour in contourRed:
             red = cv2.boundingRect(contour)
-            rx,ry,rw,rh = red
             if red[2]>90 and red[3]>90:          
                 centerred = (2*red[0]+red[2])//2, (2*red[1]+red[3])//2
                 for redVid in videos:
@@ -451,7 +454,8 @@ def _detection_():
                         cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
                         with detectionLock:
                             global ptRed
-                            ptRed = ((rx+rw)/2,(ry+rh)/2)
+                            ptRed = centerred
+                            # ptRed = ((rx+rw)/2,(ry+rh)/2)
                     else:
                         resetRed()
         
@@ -459,7 +463,6 @@ def _detection_():
         contourBlu, _2 = cv2.findContours(bottom_blue_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         for contour in contourBlu:
             blu = cv2.boundingRect(contour)
-            bx,by,bw,bh = blu
             if blu[2]>90 and blu[3]>90:          
                 centerBlu = (2*blu[0]+blu[2])//2, (2*blu[1]+blu[3])//2
                 for bluVid in videos:
@@ -468,18 +471,15 @@ def _detection_():
                         cv2.circle(bluVid, centerBlu, 1, (255,0,0) ,thickness=3)
                         with detectionLock:
                             global ptBlue
-                            ptBlue = (int((bx+bw)/2), int((by+bh)/2))
+                            ptBlue = centerBlu
+                            # ptBlue = (int((bx+bw)/2), int((by+bh)/2))
                     else:
                         resetblu()
             
         readyDetection = True
         
-        centerObj = (int((objectX + objectY)/2),int((objectY+objectH)/2))
+        centerObj = int(objectX+ (0.5 * objectW)),int(objectY + (0.5 * objectH))
         
-        print(f'type of centerobj is {type(centerObj)}')
-        print(centerObj)
-        print(f'type of ptBlue is {type(ptBlue)}')
-        print(ptBlue)
         with distanceLock:
             if boxCheckStat == True:
                 dR = distanceRed
@@ -492,46 +492,48 @@ def _detection_():
         
         if (type(ptBlue) != type(None)) and (type(None) != type(dB)):
            cv2.line(result, centerObj, ptBlue, lineColour(dB),2)
-           cv2.putText(result, f'Distance: {dB}', (calcLineCenter(ptBlue, centerObj)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+           print(f"calclinecenter is {calcLineCenter(ptBlue, centerObj)}")
+           cv2.putText(result, f"B/{dB}", (calcLineCenter(ptBlue, centerObj)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 3)
         else:
             pass
         
         if type(ptRed) != type(None):
             cv2.line(result, ptRed, centerObj, lineColour(dR), 2)
-            cv2.putText(result, f'Distance: {dR}', calcLineCenter(ptRed, centerObj), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+            cv2.putText(result, f"R/{dR}", calcLineCenter(ptRed, centerObj), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 3)
         else:
             pass
-        
         
         for boxes in videos:
             cv2.rectangle(boxes, (590,410), (690,310), 2)
         
         
         
-        # center circle
-        cv2.circle(result, (360,640) , 5, (255,0,0), 3)
         
         # target colour in hsv
         centerBottomHsv = bottomHsv[360,640]
         
         # create slider for this later on
         cv2.rectangle(result, (objectX,objectY), (objectX+objectW,objectY+objectH),(0,255,0),3)
-        
+        # circle on the center of the target object
+        cv2.circle(result, centerObj, 1, (255,0,0) ,thickness=5)
         
         frame = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
         with detectionLock:
             global vidResult, img
             vidResult = result
             img = Image.fromarray(frame)
-distanceLock = threading.Lock()
-boxCheckStat = False
+            
+objectX = None
+objectW = None
+
 def boxCheck():
-    global objectX, objectY, objectW, objectH, objectPts, distance
-    # add slider for this later on
-    objectX = 700
+    global objectY, objectH, objectPts, distance
+    if objectX == None or objectW == None:
+        print('error object X and object W')
+        exit()
     objectY = 0
-    objectW = 200
     objectH = 720 
+    
     objectPts = np.array([(objectX,objectY),(objectX+objectW, objectY),(objectX+objectW,objectY+objectH),(objectX,objectY+objectH)])
     
     # write command based on arduino
@@ -598,14 +600,12 @@ def detectionInit():
     
     print('detection initialized')
     
-    if selectedColour == None:
-        print('selectedColour is Nonetype')
-        return
-    else:
-        thread6 = threading.Thread(target=_detection_)
-        thread6.start()
+    
+    thread6 = threading.Thread(target=_detection_)
+    thread6.start()
     
     print('thread6 started ************** {}'.format(thread6.is_alive()))
+    
     def updateCanvas():
         print('entered updatecanvas')
         if threadKill.is_set():
@@ -613,12 +613,11 @@ def detectionInit():
             return
         with detectionLock:
             global imgtk
-            
             if img is not None:
                 imgtk = ImageTk.PhotoImage(image=img)
                 
-                canvas.itemconfig(canvas_image, image = imgtk) 
-                canvas.image = imgtk
+                canvas.itemconfig(canvas_image, image= imgtk) 
+                canvas.image= imgtk
                 
         displayWindow.after(1000,updateCanvas)
     
@@ -640,9 +639,11 @@ def colourInterface():
     colourSelectInfo.place(x=30, y=15)
         
     redOpt = tk.BooleanVar()
-
     BluOpt = tk.BooleanVar()
-
+    
+    slider0Obj = tk.IntVar() # width
+    slider1Obj = tk.IntVar() # x value
+    # slider2Obj = tk.IntVar() # safety distance
     
     print(f'redOpt state is {redOpt.get()}')
     print(f'BluOpt state is {BluOpt.get()}')
@@ -667,8 +668,32 @@ def colourInterface():
         selectedColour['blue'] = BluOpt.get()
         print('selected colour is {}'.format(selectedColour))
 
+    def updateScale():
+        global objectX,objectW
+        objectX = int(slider1.get())
+        print(f'ObjectX is {objectX}\n')
+        objectW = int(slider0.get())
+        print(f'ObjectW is {objectW}\n')
     
-
+    slider0Info = tk.Label(colourWindow, text=f'width')
+    slider0Info.place(x=30, y=200)
+    
+    slider1Info = tk.Label(colourWindow, text=f'X value')
+    slider1Info.place(x=30, y=150)
+    
+    # slider2Info = tk.Label(colourWindow, text=f'safety distance')
+    # slider2Info.place(x=30, y=200)
+    
+    slider0 = tk.Scale(colourWindow,variable=slider0Obj, orient= HORIZONTAL, from_=0, to=1280, command=updateScale)
+    slider0.set(200)
+    slider0.place(x = 30, y= 230)
+    
+    slider1 = tk.Scale(colourWindow,variable=slider1Obj, orient= HORIZONTAL, from_=0, to=1280, command=updateScale)
+    slider1.set(900)
+    slider1.place(x = 30, y= 175)
+    
+    updateBtn = tk.Button(colourWindow, text='update', command=lambda: updateScale())
+    updateBtn.place(x= 30, y= 300)
     redBtn = tk.Checkbutton(colourWindow, text='red', variable=(redOpt), command= lambda: updateRedColour())
     BlueBtn = tk.Checkbutton(colourWindow, text='blue',variable=(BluOpt), command= lambda: updateBlueColour())
 
@@ -679,8 +704,9 @@ def colourInterface():
         print('waiting for cam')
     
     nxtBtn = tk.Button(colourWindow, text='next', command=lambda: detectionInit())
-    nxtBtn.place(x= 160, y=100)
+    nxtBtn.place(x= 160, y=400)
     
+    updateScale()
     colourWindow.mainloop()
 
 
