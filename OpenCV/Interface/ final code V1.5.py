@@ -9,6 +9,7 @@ import serial
 from PIL import Image, ImageTk
 import threading
 import numpy as np
+import json
 
 
 thread1 = None
