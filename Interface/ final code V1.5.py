@@ -9,8 +9,8 @@ import serial
 from PIL import Image, ImageTk
 import threading
 import numpy as np
+import os
 import json
-
 
 thread1 = None
 thread2 = None
@@ -46,27 +46,58 @@ ptBlue = None
 ptRed = None
 distanceLock = threading.Lock()
 boxCheckStat = False
+jsonState = False
+json_data = {}
 
-def launcher():
-    logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-    global root
-    root = tk.Tk()
-    root.title("Project Claw For Humanity V1.0")
+# json data
+comList_val = None 
+camList_val = None
+baud_val = None
+slider0Obj = None
+slider1Obj = None
+width = None
+height = None
 
-    logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-    root.iconphoto(True, logo)
-    logo = logo.subsample(2)
-    logo_label = tk.Label(root, image=logo)
-    logo_label.pack()
-    root.geometry("300x300")  # Call __initiate__() through root.after()
-    root.after(3000, __initiate__)
-    root.mainloop()
+# savePath = os.getcwd() + "/json/save.json"
+# jsons = os.listdir(str(os.getcwd() + "/json"))
+
+
+
+
+
+
+
+# def launcher():
+#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
+#     global root
+#     root = tk.Tk()
+#     root.title("Project Claw For Humanity V1.0")
+
+#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
+#     root.iconphoto(True, logo)
+#     logo = logo.subsample(2)
+#     logo_label = tk.Label(root, image=logo)
+#     logo_label.pack()
+    
+#     # if there is none, pass
+#     if jsons == []:
+#         print('none in jsons')
+        
+#     # if there are, set global variables
+#     else:
+#         print("jsons filled with something")
+        
+
+
+#     root.geometry("300x300")  
+    
+#     # root.after(3000, __initiate__)
+#     root.mainloop()
 
 
 def __initiate__(): # returns camport, comport and baudrate
-    
     # create variables
-    global window
+    global window, comList_val, baud_val, camList_val
     baudRates = [300,1200,2400,9600,10417,19200,57600,115200]
     defaultLocX = 30 # default x location 
     defaultLocY = 150
@@ -107,6 +138,7 @@ def __initiate__(): # returns camport, comport and baudrate
         SerialDescription = []
         i=0
         ports = list(serial.tools.list_ports.comports())
+        
         if len(ports) == 0:
             SerialDescription.append("No Ports Available")
             tk.messagebox.showinfo(title = 'warning', message = 'No Ports available')
@@ -124,20 +156,41 @@ def __initiate__(): # returns camport, comport and baudrate
         print('entered receiveVal')
         
         
+        
         global HWID, serialDescription
         serialDescription, HWID = searchSerialPort()
         camPorts = searchPortCam() 
         
+        if jsonState == True:
+            for comdata in serialDescription:
+                if json_data["ComOption"] == comdata:
+                    ComOption = tk.OptionMenu(window, comList_val, *serialDescription)
+                    ComOption.setvar(json_data["ComOption"])
+                else:
+                    pass
+            for camdata in camPorts:
+                if json_data["CamOption"] == camdata:
+                    CamOption = tk.OptionMenu(window, camList_val, *camPorts)
+                    CamOption.setvar(json_data["CamOption"])
+                else:
+                    pass
+            baudOption.setvar(json_data["baudOption"])
+        else:
+            pass
+        
+            
+        camPorts = searchPortCam()
         ComOption = tk.OptionMenu(window, comList_val, *serialDescription)
         baudOption = tk.OptionMenu(window, baud_val, *baudRates)
         CamOption = tk.OptionMenu(window, camList_val, *camPorts)
+        
         ComOption.place(x= defaultLocX, y= 45)
         baudOption.place(x= defaultLocX, y= 100)
         CamOption.place(x=defaultLocX, y= defaultLocY)
             
         window.after(5000, receiveVal)
 
-        
+    
     receiveVal()
     btn = tk.Button(window, text='Next', command=lambda: camera_Setting(camList_val.get(), comList_val.get(),baud_val.get()))
     btn.place(x= defaultLocX+10, y= 200)
@@ -179,11 +232,16 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     # entry
     subTitle = tk.Label(camWindow, text='Width x Height for camera')
     subTitle.place(x=30, y=5)
-    
     width = tk.Entry(camWindow, width=4)
     width.place(x=30, y=30)
+    
     height = tk.Entry(camWindow, width=4)
     height.place(x=90,y=30)
+    
+    if jsonState == True:
+        width.insert(0,json_data["width"])
+        height.insert(0,json_data["height"])
+    
     x = tk.Label(camWindow, text='X')
     x.place(x=79, y=33)
     
@@ -644,6 +702,13 @@ def colourInterface():
     
     slider0Obj = tk.IntVar() # width
     slider1Obj = tk.IntVar() # x value
+    
+    if jsonState == True:
+        slider0Obj.set(int(json_data["slider0Obj"]))
+        slider1Obj.set(int(json_data["slider1Obj"]))
+    else:
+        pass
+    
     # slider2Obj = tk.IntVar() # safety distance
     
     print(f'redOpt state is {redOpt.get()}')
@@ -710,7 +775,18 @@ def colourInterface():
     updateScale()
     colourWindow.mainloop()
 
-
+def createJson():
+    savingData = {
+        "comList_val":comList_val,
+        "camList_val":camList_val,
+        "baud_val":baud_val,
+        "slider0Obj":slider0Obj,
+        "slider1Obj":slider1Obj,
+        "width":width,
+        "height":height
+    }
+    with open(str(savePath), "w+") as f:
+        json.dump(savingData, f)
 
 __initiate__()
 
@@ -724,5 +800,14 @@ if thread1!= None and thread2!=None and thread3!= None != None and thread6 != No
     thread3.join()
     thread4.join()
     thread6.join()
+
+
+comList_val = None 
+camList_val = None
+baud_val = None
+slider0Obj = None
+slider1Obj = None
+width = None
+height = None
 
 exit()

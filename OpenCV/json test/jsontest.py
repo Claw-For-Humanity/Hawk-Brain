@@ -1,17 +1,22 @@
+import os
 import json
 
-# info we need
+# path that you want to save data
+savePath = os.getcwd() + "/json/save.json"
 
-# com port -- done
-# baud rate -- done 
-# cam port -- done
-# cam resolution x -- done
-# cam resolution y -- done
-# select colour -- 
-# x value 
-# width of the push range
+# json files in savePath
+jsons = os.listdir(str(os.getcwd() + "/json"))
 
-dictionary = {
+# if there is none, pass
+if jsons == []:
+    print('none in jsons')
+# if there are, set global variables
+else:
+    print("jsons filled with something")
+    # set global variables.
+    # set saveData as True
+
+savingData = {
         "baud_val" : "9600",
         "camList_val" : "0",
         "comList_val" : "", # set this later
@@ -21,10 +26,12 @@ dictionary = {
         "bluOpt": "True"
               }
 
-json_object = json.dumps(dictionary,indent=4)
+with open(str(savePath), "w+") as f:
+    json.dump(savingData, f)
+    
+with open(str(savePath), 'r') as file:
+    json_data = json.load(file)
 
-print(json_object)
 
-with open("sample.json", "w") as outfile:
-    outfile.write(json_object)
-    print('done')
+print(json_data)
+    
