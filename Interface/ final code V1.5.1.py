@@ -93,34 +93,6 @@ jsons = os.listdir(str(os.getcwd() + "/json"))
 print(f"json file list : {jsons}")
 
 
-# def launcher():
-#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-#     global root
-#     root = tk.Tk()
-#     root.title("Project Claw For Humanity V1.0")
-
-#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-#     root.iconphoto(True, logo)
-#     logo = logo.subsample(2)
-#     logo_label = tk.Label(root, image=logo)
-#     logo_label.pack()
-    
-#     # if there is none, pass
-#     if jsons == []:
-#         print('none in jsons')
-        
-#     # if there are, set global variables
-#     else:
-#         print("jsons filled with something")
-        
-
-
-#     root.geometry("300x300")  
-    
-#     # root.after(3000, __initiate__)
-#     root.mainloop()
-
-
 def __initiate__(): # returns camport, comport and baudrate
     # create variables
     global window, comList_val, baud_val, camList_val
@@ -277,7 +249,6 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     camWindow.mainloop()
 
 def threadVid():
-    
     global thread1
     print('thread entered')
     def update():
@@ -335,7 +306,6 @@ def camDisplayer(resolutionX, resolutionY, communication):
             else:
                 pass
     
-
         frame = cv2.cvtColor(pic, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (int(displayResX),int(displayResY)))
             
@@ -344,7 +314,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
         
         canvas.itemconfig(canvas_image, image = imgtk)
         canvas.image = imgtk
-        camWindow.after(1000,update_canvas)
+        camWindow.after(10,update_canvas)
             
     
     print('updateing canvas..')
@@ -367,11 +337,6 @@ def __initCom__(communication):
 
     portInfo = tk.Label(comWindow, text=f'comport connection check // selected comport is {communication[0]} // selected baud rate is {communication[1]}')
     portInfo.place(x=30, y=15)
-
-   
-        
-
-
     
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
     cntBtn.place(x= 30, y= 90)
@@ -411,6 +376,7 @@ def update_gui():
         elif incomingState == False: 
             log(text_widget, f'waiting for incoming bytes from arduino')
 
+        # check incoming data every second
         loggingbox.after(1000, update_gui) 
 
 def logOpen(communication):
@@ -423,19 +389,10 @@ def logOpen(communication):
     thread2.start()
     
     print(f'thread 2 is started state is : {thread2.is_alive()}')
-    # if serialInst.is_open:
-    #     with checkStateLock:
-    #         global state
-    #         state = 'serial is open'
     
-    # else:
-    #     with checkStateLock:
-    #         state = 'serial is not open'
-    #         tk.messagebox.showinfo(title = 'warning', message = 'serial cannot be opened. Please check the port')
-    #         return
     
     loggingbox = tk.Tk()
-    loggingbox.title('logger')   
+    loggingbox.title('logging box')   
     
     with receiveLock:
         if decodedData == None:
@@ -583,8 +540,6 @@ def _detection_():
             cv2.rectangle(boxes, (590,410), (690,310), 2)
         
         
-        
-        
         # target colour in hsv
         # centerBottomHsv = bottomHsv[360,640]
         
@@ -689,7 +644,7 @@ def detectionInit():
                 canvas.itemconfig(canvas_image, image= imgtk) 
                 canvas.image= imgtk
                 
-        displayWindow.after(1000,updateCanvas)
+        displayWindow.after(10,updateCanvas)
     
     updateCanvas()
     print('end of detectioninit -- detection working // thread6 state is {}'.format(thread6.is_alive()))
