@@ -2,12 +2,14 @@ import cv2
 import uuid
 import os
 import time
-import keyboard # usage of keyboard requires admin previliges (maybe windows may be different)
+# import keyboard # usage of keyboard requires admin previliges (maybe windows may be different)
 import sys
+import ctypes
+
 
 collectType = ['one', 'two']
 number_img = 5
-imgPath = os.path.join('Tensorflow', 'workspace', 'images', 'collectedData')
+imgPath =os.path.join(os.getcwd(),'Tensorflow', 'workspace', 'images', 'collectedData')
 camState = False
 vid = cv2.VideoCapture(0)
 frames = None
@@ -15,45 +17,12 @@ currentIMG = 0
 currentType = 0
 currentIMG = 0
 currentType = 0
-        
 
-# for windows
-# import ctypes
-# import sys
-
-# def run_with_admin():
-#     if ctypes.windll.shell32.IsUserAnAdmin():
-#         # User already has administrative privileges
-#         print("Running with administrative privileges.")
-#     else:
-#         # Prompt user to elevate privileges
-#         params = " ".join([sys.executable] + sys.argv)
-#         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
-
-# # Call the function to check and prompt for administrative privileges
-# run_with_admin()
-
-
-
-# for mac
-
-def run_with_admin():
-    if os.getuid() == 0:
-        # User already has administrative privileges
-        print("Running with administrative privileges.")
-    else:
-        # Prompt user to elevate privileges
-        script_path = os.path.abspath(sys.argv[0])
-        os.system(f"osascript -e 'do shell script \"{script_path}\" with administrator privileges'")
-
-# Call the function to check and prompt for administrative privileges
-run_with_admin()
-
-
+print(imgPath)
 
 def sourceCollector():
     if not os.path.exists(imgPath):
-        os.makedirs(imgPath)
+        # os.makedirs(imgPath)
         print(f'{imgPath} / new directory made')
     else:
         print(f'directory already exists -- {imgPath}')
@@ -61,6 +30,7 @@ def sourceCollector():
 
     for type in collectType:
         path = os.path.join(imgPath, type)
+
         if not os.path.exists(path):
             os.makedirs(path)
             print('inner path updated')
@@ -70,7 +40,7 @@ def sourceCollector():
     print('entering photo take')
 
 
-    # displayCam()
+    displayCam()
     labeler()
     
 
@@ -90,14 +60,15 @@ def displayCam():
         
         cv2.imshow('camera', std)
         
-        def takePic():
+        def photoTake():
             global currentIMG, currentType, currentIMG, currentType
             if currentIMG == maxImg + 1:
                 currentIMG = 0
                 currentType += 1
                 
-            if currentType == maxType + 1:
+            if currentType == maxType:
                 print('done')
+                exit()
 
             # copy frame to the picture 
             picture = std.copy()
@@ -109,12 +80,11 @@ def displayCam():
             print(f'collecting image number {currentIMG}')
             imgname = os.path.join(imgPath, collectType[currentType], collectType[currentType] + '.' + f'{str(uuid.uuid1())}.jpg')
             cv2.imwrite(imgname, picture)
+            print(f'written @ {imgname}')
             
             currentIMG += 1
-        
-        
-        takePic()       
-
+         
+        photoTake()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -124,9 +94,12 @@ def displayCam():
 
 
 def labeler():
-    labele_path = os.path.join('tensorflow', 'labelling')
+    labele_path =  os.path.join(os.getcwd(),'Tensorflow', 'labelimg')
+    print(labele_path)
     if not os.path.exists(labele_path):
+        # make directory
         os.makedirs(labele_path)
+        
 
 
 sourceCollector()
