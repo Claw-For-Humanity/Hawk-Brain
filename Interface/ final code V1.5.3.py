@@ -105,11 +105,12 @@ def __initiate__(): # returns camport, comport and baudrate
     window = tk.Tk()
     window.title("Project Claw For Humanity Port Selector")
     window.geometry("600x240")
-    window.resizable(True,True)
+    window.resizable(False,False)
     # window.iconphoto(True, logo)
     print (f'\n\n{comList_val}')
     if comList_val is not None:
         comList_val = tk.StringVar(window, str(comList_val))
+    
     else:
         print('comlist val is none')
         comList_val = tk.StringVar(window, "Com Port")
@@ -121,7 +122,7 @@ def __initiate__(): # returns camport, comport and baudrate
     else:
         baud_val = tk.StringVar(window, "Baud Rate")
     baudLable = tk.Label(window, text="Select Baud Rate", font=('Arial', 15))  
-    baudLable.place(x= defaultLocX, y= 80)    
+    baudLable.place(x= defaultLocX, y= 80)
     if camList_val is not None:
         camList_val = tk.StringVar(window, str(camList_val))
     else:
@@ -216,8 +217,8 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     camWindow = tk.Tk()
     camWindow.title("Camera Setting")
     camWindow.option_add("*Font","Ariel 15")
-    camWindow.geometry("1000x500")
-    camWindow.resizable(True, True)
+    camWindow.geometry("200x100")
+    camWindow.resizable(False, False)
     
     # entry
     subTitle = tk.Label(camWindow, text='Width x Height for camera')
