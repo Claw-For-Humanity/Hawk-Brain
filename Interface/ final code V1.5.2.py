@@ -1,4 +1,5 @@
 # implement location detection and json
+import math
 import time
 import tkinter as tk
 from tkinter import *
@@ -47,8 +48,8 @@ ptBlue = None
 ptRed = None
 distanceLock = threading.Lock()
 boxCheckStat = False
-jsonState = False
-json_data = {}
+centerObj = None
+
 objectX = None
 objectW = None
 slider1 = None
@@ -91,34 +92,6 @@ else:
 
 jsons = os.listdir(str(os.getcwd() + "/json"))
 print(f"json file list : {jsons}")
-
-
-# def launcher():
-#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-#     global root
-#     root = tk.Tk()
-#     root.title("Project Claw For Humanity V1.0")
-
-#     logo = tk.PhotoImage(file="/Users/changbeankang/Desktop/GitHub/Claw-For-Humanity/Com/logo/Picture2.png")
-#     root.iconphoto(True, logo)
-#     logo = logo.subsample(2)
-#     logo_label = tk.Label(root, image=logo)
-#     logo_label.pack()
-    
-#     # if there is none, pass
-#     if jsons == []:
-#         print('none in jsons')
-        
-#     # if there are, set global variables
-#     else:
-#         print("jsons filled with something")
-        
-
-
-#     root.geometry("300x300")  
-    
-#     # root.after(3000, __initiate__)
-#     root.mainloop()
 
 
 def __initiate__(): # returns camport, comport and baudrate
@@ -277,7 +250,6 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     camWindow.mainloop()
 
 def threadVid():
-    
     global thread1
     print('thread entered')
     def update():
@@ -335,7 +307,6 @@ def camDisplayer(resolutionX, resolutionY, communication):
             else:
                 pass
     
-
         frame = cv2.cvtColor(pic, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (int(displayResX),int(displayResY)))
             
@@ -344,7 +315,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
         
         canvas.itemconfig(canvas_image, image = imgtk)
         canvas.image = imgtk
-        camWindow.after(1000,update_canvas)
+        camWindow.after(10,update_canvas)
             
     
     print('updateing canvas..')
@@ -367,11 +338,6 @@ def __initCom__(communication):
 
     portInfo = tk.Label(comWindow, text=f'comport connection check // selected comport is {communication[0]} // selected baud rate is {communication[1]}')
     portInfo.place(x=30, y=15)
-
-   
-        
-
-
     
     cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
     cntBtn.place(x= 30, y= 90)
@@ -411,6 +377,7 @@ def update_gui():
         elif incomingState == False: 
             log(text_widget, f'waiting for incoming bytes from arduino')
 
+        # check incoming data every second
         loggingbox.after(1000, update_gui) 
 
 def logOpen(communication):
@@ -423,19 +390,10 @@ def logOpen(communication):
     thread2.start()
     
     print(f'thread 2 is started state is : {thread2.is_alive()}')
-    # if serialInst.is_open:
-    #     with checkStateLock:
-    #         global state
-    #         state = 'serial is open'
     
-    # else:
-    #     with checkStateLock:
-    #         state = 'serial is not open'
-    #         tk.messagebox.showinfo(title = 'warning', message = 'serial cannot be opened. Please check the port')
-    #         return
     
     loggingbox = tk.Tk()
-    loggingbox.title('logger')   
+    loggingbox.title('logging box')   
     
     with receiveLock:
         if decodedData == None:
@@ -470,9 +428,30 @@ def send_safety(data):
     print(f'\n{data.encode()} is written\n')
     serialInst.write(f"{data}".encode())
     time.sleep(4)
+    
+def distanceCalc(colour, ColourCenter):
+    print(f'\ncolour: {str(colour)} // value : {ColourCenter}\n')
+    while type(centerObj) == type(None):
+        print('warning : waiting for centerOBJ to be created')
+    
+    if not type(ColourCenter) == type(None):
+        print('check center value')
+
+        x1 = centerObj[0]
+        y1 = centerObj[1]
+        
+        x = ColourCenter[0]
+        y = ColourCenter[1]
+        
+        distance = np.sign(x1 - x) * math.sqrt((x1 - x)**2 + (y1-y)**2)
+    else:
+        distance = None
+    return distance
+    
+    
 
 def _detection_():
-    global red_lower_colour, red_upper_colour, blue_lower_colour, blue_upper_colour, thread4, readyDetection
+    global red_lower_colour, red_upper_colour, blue_lower_colour, blue_upper_colour, thread4, readyDetection,centerObj
     red_lower_colour = np.array([162,100,100])
     red_upper_colour = np.array([185,255,255])
     
@@ -496,12 +475,10 @@ def _detection_():
     while not threadKill.is_set():
         def lineColour(distance):
             if distance is not None:
-                if distance > 0:
+                if distance >= 0: # blue
                     return (0,0,255)
                 elif distance < 0:
-                    return(0,255,0)
-                else: 
-                    return(255,0,0)
+                    return(0,255,0) # red
             else:
                 pass
             
@@ -522,6 +499,7 @@ def _detection_():
         contourRed, _1 = cv2.findContours(bottom_red_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         for contour in contourRed:
             red = cv2.boundingRect(contour)
+            # x,y,w,h
             if red[2]>90 and red[3]>90:          
                 centerred = (2*red[0]+red[2])//2, (2*red[1]+red[3])//2
                 for redVid in videos:
@@ -531,6 +509,8 @@ def _detection_():
                         with detectionLock:
                             global ptRed
                             ptRed = centerred
+                            
+                            # d = math.sqrt(())
                             # ptRed = ((rx+rw)/2,(ry+rh)/2)
                     else:
                         resetRed()
@@ -558,8 +538,8 @@ def _detection_():
         
         with distanceLock:
             if boxCheckStat == True:
-                dR = distanceRed
-                dB = distanceBlu
+                dR = distanceCalc("red", ptRed)
+                dB = distanceCalc("blue",ptBlue)
                 
             else:
                 dR = None
@@ -581,12 +561,6 @@ def _detection_():
         
         for boxes in videos:
             cv2.rectangle(boxes, (590,410), (690,310), 2)
-        
-        
-        
-        
-        # target colour in hsv
-        # centerBottomHsv = bottomHsv[360,640]
         
         # create slider for this later on
         cv2.rectangle(result, (objectX,objectY), (objectX+objectW,objectY+objectH),(0,255,0),3)
@@ -614,7 +588,7 @@ def boxCheck():
     pull_object = 2
     while readyDetection == False:
         print('boxCheck waiting for __detection__')
-        
+    
     while not threadKill.is_set():
         with detectionLock:
             global ptBlue
@@ -624,11 +598,8 @@ def boxCheck():
         with distanceLock:
             global boxCheckStat, distanceBlu, distanceRed
             boxCheckStat = True
-            distanceBlu = cv2.pointPolygonTest(objectPts, objectBlue, True)
-            distanceRed = cv2.pointPolygonTest(objectPts, objectRed, True)
-        
-        
-                   
+            distanceBlu = distanceCalc("blue",ptBlue)
+            distanceRed = distanceCalc("red",ptRed)
         
         print(f'objectblue is {ptBlue}')
         
@@ -670,11 +641,8 @@ def detectionInit():
     
     print('detection initialized')
     
-    
     thread6 = threading.Thread(target=_detection_)
     thread6.start()
-    
-    print('thread6 started ************** {}'.format(thread6.is_alive()))
     
     def updateCanvas():
         print('entered updatecanvas')
@@ -689,10 +657,9 @@ def detectionInit():
                 canvas.itemconfig(canvas_image, image= imgtk) 
                 canvas.image= imgtk
                 
-        displayWindow.after(1000,updateCanvas)
+        displayWindow.after(10,updateCanvas)
     
     updateCanvas()
-    print('end of detectioninit -- detection working // thread6 state is {}'.format(thread6.is_alive()))
     displayWindow.mainloop()
     
 def colourInterface():
@@ -711,10 +678,7 @@ def colourInterface():
     
     slider0Obj = tk.IntVar() # width
     slider1Obj = tk.IntVar() # x value
-    
-  
-    
-    # slider2Obj = tk.IntVar() # safety distance
+    slider2Obj = tk.IntVar() # command sending distance
     
     print(f'redOpt state is {redOpt.get()}')
     print(f'BluOpt state is {BluOpt.get()}')
@@ -725,9 +689,7 @@ def colourInterface():
             redOpt.set(False)
         else:     
             redOpt.set(True)
-            
         selectedColour['red'] = redOpt.get()
-        print('selected colour is {}'.format(selectedColour))
 
     def updateBlueColour():
         global BluOpt,selectedColour
@@ -735,16 +697,17 @@ def colourInterface():
             BluOpt.set(False)
         else:
             BluOpt.set(True)
-
         selectedColour['blue'] = BluOpt.get()
-        print('selected colour is {}'.format(selectedColour))
 
     def updateScale():
-        global objectX,objectW
+        global objectX,objectW, objectCS
         objectX = int(slider1.get())
         print(f'ObjectX is {objectX}\n')
         objectW = int(slider0.get())
         print(f'ObjectW is {objectW}\n')
+        objectCS = int(slider2.get())
+        print(f'objectCS is {objectCS}')
+    
     
     slider0Info = tk.Label(colourWindow, text=f'width')
     slider0Info.place(x=30, y=200)
@@ -752,31 +715,35 @@ def colourInterface():
     slider1Info = tk.Label(colourWindow, text=f'X value')
     slider1Info.place(x=30, y=150)
     
-    # slider2Info = tk.Label(colourWindow, text=f'safety distance')
-    # slider2Info.place(x=30, y=200)
+    slider2Info = tk.Label(colourWindow, text=f'command sending distance')
+    slider2Info.place(x=30, y=250)
     
-    slider0 = tk.Scale(colourWindow,variable=slider0Obj, orient= HORIZONTAL, from_=0, to=1280, command=updateScale)
+    # slider 0 - x value
+    slider0 = tk.Scale(colourWindow,variable=slider0Obj, orient= HORIZONTAL, from_=0, to=1280, command= updateScale)
     if objectX is not None:
         slider0.set(int(objectX))
     else:
         slider0.set(200)
     slider0.place(x = 30, y= 230)
     
-    slider1 = tk.Scale(colourWindow,variable=slider1Obj, orient= HORIZONTAL, from_=0, to=1280, command=updateScale)
-    
+    # slider 1 - width
+    slider1 = tk.Scale(colourWindow,variable=slider1Obj, orient= HORIZONTAL, from_=0, to=1270, command= updateScale)
     if objectW is not None:
         slider1.set(int(objectW))
     else:
         slider1.set(900)
-    
     slider1.place(x = 30, y= 175)
+    
+    # slider 2 - command sending distance
+    slider2 = tk.Scale(colourWindow, variable=slider2Obj, orient= HORIZONTAL, from_= 0, to= 700, command= updateScale)
+    slider2.place(x= 30, y= 285)
+    
     
     updateBtn = tk.Button(colourWindow, text='update', command=lambda: updateScale())
     updateBtn.place(x= 30, y= 300)
     redBtn = tk.Checkbutton(colourWindow, text='red', variable=(redOpt), command= lambda: updateRedColour())
     BlueBtn = tk.Checkbutton(colourWindow, text='blue',variable=(BluOpt), command= lambda: updateBlueColour())
 
-    
     
     redBtn.place(x=30, y= 45)
     BlueBtn.place(x=130, y= 45)
@@ -789,6 +756,7 @@ def colourInterface():
     
     updateScale()
     colourWindow.mainloop()
+
 
 def createJson():
     global savingData
@@ -805,37 +773,27 @@ def createJson():
     with open(str(jsonPath), "w+") as f:
         json.dump(savingData, f)
 
+def goodbye():
+    print('goodbye!')
+    if thread1!= None and thread2!=None and thread3!= None != None and thread6 != None:
+        thread1.join()
+        thread2.join()
+        thread3.join()
+        thread4.join()
+        thread6.join()
+        
+    killFlag.set()
+    stateKill.set()
+    threadKill.set()
+    
+    createJson()
+    
+    if cam is not None:
+        cam.release()
+        
+    exit()
+        
+
 __initiate__()
-
-killFlag.set()
-stateKill.set()
-threadKill.set()
-
-print('killflags set')
-
-if thread1!= None and thread2!=None and thread3!= None != None and thread6 != None:
-    thread1.join()
-    thread2.join()
-    thread3.join()
-    thread4.join()
-    thread6.join()
-
-print('thread joining process complete')
-
-print('\nthread safely killed')
-
-# if not comList_val == None and camList_val == None and baud_val == None and slider0Obj == None and slider1Obj == None and width == None and height == None:
-
-print('about to create json')
-
-createJson()
-
-print(f'created JSON and it is {savingData}')
-
-print('json process done')
-
-print('preparing to exit')
-if cam is not None:
-    cam.release()
-
-exit()
+print('__LOG__ : exitted main function')
+goodbye()
