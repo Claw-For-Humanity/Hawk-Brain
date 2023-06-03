@@ -7,7 +7,7 @@ from google.protobuf import text_format
 
 
 
-mainpath = os.path.join(os.getcwd(), "MachineLearnTest")
+mainpath = os.path.join(os.getcwd(), "test123")
 
 
 CUSTOM_MODEL_NAME = 'my_ssd_mobnet' 
@@ -56,6 +56,10 @@ with open(files['LABELMAP'], 'w') as f:
 # ARCHIVE_FILES = os.path.join(paths['IMAGE_PATH'], 'archive.tar.gz')
 # if os.path.exists(ARCHIVE_FILES):
 #   !tar -zxvf {ARCHIVE_FILES}
+
+
+
+
 if not os.path.exists(files['TF_RECORD_SCRIPT']):
     print('warning ! line 54')
     
@@ -84,9 +88,13 @@ config_text = text_format.MessageToString(pipeline_config)
 with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "wb") as f:                                                                                                                                                                                                                     
     f.write(config_text)   
 
+
+print('training script')
+
 TRAINING_SCRIPT = os.path.join(paths['APIMODEL_PATH'], 'research', 'object_detection', 'model_main_tf2.py')
+print(f'{TRAINING_SCRIPT}')
 
+print('\n')
+print('command')
 command = "python {} --model_dir={} --pipeline_config_path={} --num_train_steps=2000".format(TRAINING_SCRIPT, paths['CHECKPOINT_PATH'],files['PIPELINE_CONFIG'])
-
-print(command)
-
+print(f'command is {command}')
