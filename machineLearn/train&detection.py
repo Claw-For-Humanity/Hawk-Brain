@@ -7,7 +7,7 @@ from google.protobuf import text_format
 
 
 
-mainpath = os.path.join(os.getcwd(), "MachineLearnTest")
+mainpath = os.path.join(os.getcwd(), "testing")
 
 
 CUSTOM_MODEL_NAME = 'my_ssd_mobnet' 
@@ -43,50 +43,46 @@ for path in paths.values():
         
 
         
-labels = [{'name':'one', 'id':1}, {'name':'two', 'id':2}]
+# labels = [{'name':'one', 'id':1}, {'name':'two', 'id':2}]
 
-with open(files['LABELMAP'], 'w') as f:
-    for label in labels:
-        f.write('item { \n')
-        f.write('\tname:\'{}\'\n'.format(label['name']))
-        f.write('\tid:{}\n'.format(label['id']))
-        f.write('}\n')
+# with open(files['LABELMAP'], 'w') as f:
+#     for label in labels:
+#         f.write('item { \n')
+#         f.write('\tname:\'{}\'\n'.format(label['name']))
+#         f.write('\tid:{}\n'.format(label['id']))
+#         f.write('}\n')
 
-# OPTIONAL IF RUNNING ON COLAB
-# ARCHIVE_FILES = os.path.join(paths['IMAGE_PATH'], 'archive.tar.gz')
-# if os.path.exists(ARCHIVE_FILES):
-#   !tar -zxvf {ARCHIVE_FILES}
-if not os.path.exists(files['TF_RECORD_SCRIPT']):
-    print('warning ! line 54')
+# if not os.path.exists(files['TF_RECORD_SCRIPT']):
+#     print('warning ! line 54')
     
-print(os.path.join(paths['PRETRAINED_MODEL_PATH'], PRETRAINED_MODEL_NAME, 'pipeline.config'))
-print(os.path.join(paths['CHECKPOINT_PATH']))
+# print(os.path.join(paths['PRETRAINED_MODEL_PATH'], PRETRAINED_MODEL_NAME, 'pipeline.config'))
+# print(os.path.join(paths['CHECKPOINT_PATH']))
 
-config = config_util.get_configs_from_pipeline_file(files['PIPELINE_CONFIG'])
+# config = config_util.get_configs_from_pipeline_file(files['PIPELINE_CONFIG'])
 
-print(config)
+# print(config)
 
-pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
-with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "r") as f:                                                                                                                                                                                                                     
-    proto_str = f.read()                                                                                                                                                                                                                                          
-    text_format.Merge(proto_str, pipeline_config)  
+# pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+# with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "r") as f:                                                                                                                                                                                                                     
+#     proto_str = f.read()                                                                                                                                                                                                                                          
+#     text_format.Merge(proto_str, pipeline_config)  
     
-pipeline_config.model.ssd.num_classes = len(labels)
-pipeline_config.train_config.batch_size = 4
-pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRETRAINED_MODEL_PATH'], PRETRAINED_MODEL_NAME, 'checkpoint', 'ckpt-0')
-pipeline_config.train_config.fine_tune_checkpoint_type = "detection"
-pipeline_config.train_input_reader.label_map_path= files['LABELMAP']
-pipeline_config.train_input_reader.tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATION_PATH'], 'train.record')]
-pipeline_config.eval_input_reader[0].label_map_path = files['LABELMAP']
-pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATION_PATH'], 'test.record')]
+# pipeline_config.model.ssd.num_classes = len(labels)
+# pipeline_config.train_config.batch_size = 4
+# pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRETRAINED_MODEL_PATH'], PRETRAINED_MODEL_NAME, 'checkpoint', 'ckpt-0')
+# pipeline_config.train_config.fine_tune_checkpoint_type = "detection"
+# pipeline_config.train_input_reader.label_map_path= files['LABELMAP']
+# pipeline_config.train_input_reader.tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATION_PATH'], 'train.record')]
+# pipeline_config.eval_input_reader[0].label_map_path = files['LABELMAP']
+# pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = [os.path.join(paths['ANNOTATION_PATH'], 'test.record')]
 
-config_text = text_format.MessageToString(pipeline_config)                                                                                                                                                                                                        
-with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "wb") as f:                                                                                                                                                                                                                     
-    f.write(config_text)   
+# config_text = text_format.MessageToString(pipeline_config)                                                                                                                                                                                                        
+# with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "wb") as f:                                                                                                                                                                                                                     
+#     f.write(config_text)   
 
-TRAINING_SCRIPT = os.path.join(paths['APIMODEL_PATH'], 'research', 'object_detection', 'model_main_tf2.py')
+# TRAINING_SCRIPT = os.path.join(paths['APIMODEL_PATH'], 'research', 'object_detection', 'model_main_tf2.py')
 
-command = "python {} --model_dir={} --pipeline_config_path={} --num_train_steps=2000".format(TRAINING_SCRIPT, paths['CHECKPOINT_PATH'],files['PIPELINE_CONFIG'])
+# command = "python {} --model_dir={} --pipeline_config_path={} --num_train_steps=2000".format(TRAINING_SCRIPT, paths['CHECKPOINT_PATH'],files['PIPELINE_CONFIG'])
 
-print(command)
+# print(command)
 

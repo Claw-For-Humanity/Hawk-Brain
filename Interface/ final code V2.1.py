@@ -309,7 +309,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
     threadVid()
     print('successfully initiated thread')
     canvas = tk.Canvas(camWindow, width=displayResX, height=displayResY)
-    canvas.grid()
+    canvas.pack()
     
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
     print('canvas created')
