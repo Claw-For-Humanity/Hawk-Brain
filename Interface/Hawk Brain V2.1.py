@@ -103,10 +103,10 @@ def __initiate__(): # returns camport, comport and baudrate
     defaultLocExpl = 130
     # create window using tkinter
     window = tk.Tk()
-    window.title("Hawk Brain V2.1")
+    window.title("Project Claw For Humanity Port Selector")
     window.geometry("600x240")
     window.resizable(False,False)
-    mphoto = PhotoImage(file=f"{os.path.join(os.getcwd(), 'datasets', 'cfhmain.png')}")
+    mphoto = PhotoImage(file=f'{os.path.join(os.getcwd(),"sources","cfhmain.png")}')
     window.iconphoto(True, mphoto)
     print (f'\n\n{comList_val}')
     if comList_val is not None:
@@ -230,13 +230,13 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     height = tk.Entry(camWindow, width=4)
     height.place(x=90,y=30)
     
-    if width is not 'None':
-        width.insert(0,width)
+    if width is not None:
+        width.insert(0,prevData["width"])
     else:
         pass
         
-    if height is not 'None':
-        height.insert(0,height)
+    if height is not None:
+        height.insert(0,prevData["height"])
     else:
         pass
     
@@ -309,7 +309,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
     threadVid()
     print('successfully initiated thread')
     canvas = tk.Canvas(camWindow, width=displayResX, height=displayResY)
-    canvas.grid()
+    canvas.pack()
     
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
     print('canvas created')
@@ -733,7 +733,7 @@ def colourInterface():
     
     # slider 0 - x value
     slider0 = tk.Scale(colourWindow,variable=slider0Obj, orient= HORIZONTAL, from_=0, to=1280, command= updateScale)
-    if objectX != 'None':
+    if objectX is not None:
         slider0.set(int(objectX))
     else:
         slider0.set(200)
@@ -741,7 +741,7 @@ def colourInterface():
     
     # slider 1 - width
     slider1 = tk.Scale(colourWindow,variable=slider1Obj, orient= HORIZONTAL, from_=0, to=1270, command= updateScale)
-    if objectW is not 'None':
+    if objectW is not None:
         slider1.set(int(objectW))
     else:
         slider1.set(900)

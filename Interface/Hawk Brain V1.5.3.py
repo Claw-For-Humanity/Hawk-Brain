@@ -73,8 +73,8 @@ if not os.path.exists(os.getcwd() + "/json"):
 
 else:
     print('else entered')
-    if os.path.exists(os.getcwd()+ "/json/save.json"):
-        f = open(os.getcwd()+ "/json/save.json")
+    if os.path.exists(os.getcwd()+ "/Hawk-Brain/json/save.json"):
+        f = open(os.getcwd()+ "/Hawk-Brain/json/save.json")
         prevData = json.load(f)
         print('prev Data detected')
         print(f'prev = {prevData}')
@@ -86,8 +86,6 @@ else:
         objectW = prevData['slider1Obj']
         width = prevData['width']
         height = prevData['height']
-        
-    print('save path is {}'.format(savePath))
     
 
 jsons = os.listdir(str(os.getcwd() + "/json"))
@@ -103,10 +101,10 @@ def __initiate__(): # returns camport, comport and baudrate
     defaultLocExpl = 130
     # create window using tkinter
     window = tk.Tk()
-    window.title("Project Claw For Humanity Port Selector")
+    window.title("Hawk Brain V2.1")
     window.geometry("600x240")
     window.resizable(False,False)
-    mphoto = PhotoImage(file=f'{os.path.join(os.getcwd(),"datasets","cfhmain.png")}')
+    mphoto = PhotoImage(file=f"{os.path.join(os.getcwd(), 'datasets', 'cfhmain.png')}")
     window.iconphoto(True, mphoto)
     print (f'\n\n{comList_val}')
     if comList_val is not None:
@@ -230,13 +228,13 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     height = tk.Entry(camWindow, width=4)
     height.place(x=90,y=30)
     
-    if width is not None:
-        width.insert(0,prevData["width"])
+    if width is not 'None':
+        width.insert(0,width)
     else:
         pass
         
-    if height is not None:
-        height.insert(0,prevData["height"])
+    if height is not 'None':
+        height.insert(0,height)
     else:
         pass
     
@@ -309,7 +307,7 @@ def camDisplayer(resolutionX, resolutionY, communication):
     threadVid()
     print('successfully initiated thread')
     canvas = tk.Canvas(camWindow, width=displayResX, height=displayResY)
-    canvas.pack()
+    canvas.grid()
     
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
     print('canvas created')
@@ -733,7 +731,7 @@ def colourInterface():
     
     # slider 0 - x value
     slider0 = tk.Scale(colourWindow,variable=slider0Obj, orient= HORIZONTAL, from_=0, to=1280, command= updateScale)
-    if objectX is not None:
+    if objectX != 'None':
         slider0.set(int(objectX))
     else:
         slider0.set(200)
@@ -741,7 +739,7 @@ def colourInterface():
     
     # slider 1 - width
     slider1 = tk.Scale(colourWindow,variable=slider1Obj, orient= HORIZONTAL, from_=0, to=1270, command= updateScale)
-    if objectW is not None:
+    if objectW is not 'None':
         slider1.set(int(objectW))
     else:
         slider1.set(900)
