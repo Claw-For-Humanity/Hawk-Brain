@@ -50,6 +50,9 @@ distanceLock = threading.Lock()
 boxCheckStat = False
 centerObj = None
 
+thread1int = 0
+comCallInt = 0
+
 objectX = None
 objectW = None
 slider1 = None
@@ -65,6 +68,8 @@ slider0Obj = None
 slider1Obj = None
 width = None
 height = None
+
+
 
 if not os.path.exists(savePath):
     os.makedirs(savePath)
@@ -254,7 +259,7 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
     btn.place(x= 150, y= 30)
     
     camWindow.mainloop()
-thread1int = 0
+
 def threadVid():
     global thread1int,thread1
     print('thread entered')
@@ -273,8 +278,6 @@ def threadVid():
         thread1int += 1
     print('thread started')
     print(f'thread state is {thread1.is_alive}')
-
-comCallInt = 0
 
 def camDisplayer(resolutionX, resolutionY, communication):
     global width, height,comCallInt
@@ -341,8 +344,6 @@ def camDisplayer(resolutionX, resolutionY, communication):
         camWindow.after(10,update_canvas)
         
     update_canvas()
-    
-    
 
 def __initCom__(communication):
     global camWindow,state,comWindow

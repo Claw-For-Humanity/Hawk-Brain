@@ -447,7 +447,7 @@ def send_safety(data):
     data = str(data)
     print(f'\n{data.encode()} is written\n')
     serialInst.write(f"{data}".encode())
-    time.sleep(4)
+    time.sleep(1)
     
 def distanceCalc(colour, ColourCenter):
     print(f'\ncolour: {str(colour)} // value : {ColourCenter}\n')
@@ -470,7 +470,7 @@ def distanceCalc(colour, ColourCenter):
 
 def _detection_():
     global red_lower_colour, red_upper_colour, blue_lower_colour, blue_upper_colour, thread4, readyDetection,centerObj
-    red_lower_colour = np.array([162,100,100])
+    red_lower_colour = np.array([152,100,100])
     red_upper_colour = np.array([185,255,255])
     
     blue_lower_colour = np.array([104,50,100])
@@ -623,11 +623,11 @@ def boxCheck():
         print(f'objectblue is {ptBlue}')
         
         if type(objectBlue) != type(None):
-            if abs(distanceBlu) <= abs(Widther):
+            if distanceBlu > 50:
                 print('\n\n blue point polygon test less than 0: = ')
                 print(f'distance between blue and object is{distanceBlu}')
                 
-                send_safety(push_object)    
+                send_safety(push_object)
                 log(text_widget, 'line 609')
             
             else:
@@ -639,15 +639,16 @@ def boxCheck():
             log(text_widget, 'line 617')
         
         if type(objectRed) != type(None):
-            if abs(distanceRed) <= abs(Widther):
-                print('\n\n red point polygon test less than 0: = ')
-                print(f'distance between red and object is{distanceRed}')
+            if distanceRed > 50:
+                log(text_widget,'line 643')
                 send_safety(push_object)
                 
             
             else:
+                log(text_widget,'line 649')
                 send_safety(pull_object)
         else:
+            log(text_widget,'line 652')
             send_safety(pull_object)
 
 def detectionInit():
