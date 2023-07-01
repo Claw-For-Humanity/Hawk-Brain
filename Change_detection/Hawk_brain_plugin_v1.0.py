@@ -61,24 +61,33 @@ def interface_cam():
     camInterface.mainloop()
     
 def comp_capture():
-    global comp_capture
+    global compImage
     print('entered compare capture')
     
     with camLock:
         if stat:
             print('captured as comparison target')
             frame = pic.copy()
-            comp_capture = frame.copy()
+            compImage = frame.copy()
+            
+            print('capturing process done')
+            print(f'captured data is {compImage}')
             compare()
         else:
             print('warning camera not avail, line 73')
             pass
 
 def compare():
+    print('entered compare function')
     global defImage, compImage
+    
     # load the two input images
-    imageDef = cv2.imread(defImage)
-    imageComp = cv2.imread(compImage)
+    imageDef = defImage
+    imageComp = compImage
+    
+    
+    print(f'\n\nimageDef is {imageDef}\n\ntype of imageDef is {type(imageDef)}\n\n')
+    print(f'\n\nimage compare is {imageComp}\n\ntype of image compare is {type(imageComp)}\n\n')
     
     
     # convert the images to grayscale
@@ -101,11 +110,11 @@ def compare():
         # bounding box on both input images to represent where the two
         # images differ
         (x, y, w, h) = cv2.boundingRect(c)
-        cv2.rectangle(imageA, (x, y), (x + w, y + h), (0, 0, 255), 2)
-        cv2.rectangle(imageB, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv2.rectangle(imageDef, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv2.rectangle(imageComp, (x, y), (x + w, y + h), (0, 0, 255), 2)
     # show the output images
-    cv2.imshow("Original", imageA)
-    cv2.imshow("Modified", imageB)
+    cv2.imshow("Original", imageDef)
+    cv2.imshow("Modified", imageComp)
     cv2.imshow("Diff", diff)
     cv2.imshow("Thresh", thresh)
     cv2.waitKey(0)

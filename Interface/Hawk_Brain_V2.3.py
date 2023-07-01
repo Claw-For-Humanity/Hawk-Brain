@@ -656,7 +656,7 @@ def detectionInit():
     resolutionX = 1280
     resolutionY = 720
     displayWindow = tk.Toplevel()
-    displayWindow.title("Detection Engine 1.0")
+    displayWindow.title("Detection Engine 2.3")
     displayWindow.geometry("2000x1000")
     displayWindow.resizable(True,True)
     canvas = tk.Canvas(displayWindow, width= resolutionX, height=resolutionY)
