@@ -15,6 +15,8 @@ import threading
 from PIL import Image, ImageTk
 import time
 
+
+compImgLock = threading.Lock()
 camLock = threading.Lock()
 threadKill = threading.Event()
 
@@ -22,10 +24,13 @@ threadKill = threading.Event()
 defImage = None
 compImage = None
 
-
 goodbyeWindow = False
 defCaptureStat = False
 initWindowKilled = False
+
+frame = None
+holdFrame = None
+
 
 # interface
 cam = cv2.VideoCapture(0)
@@ -50,7 +55,7 @@ def camWork ():
             pass
 
 def interface_cam():
-    global camInterface
+    global camInterface 
     camInterface = tk.Tk()
     camInterface.title('Detection Interface')
     camInterface.geometry('400x530')
@@ -63,60 +68,56 @@ def interface_cam():
 
 def CaptureInterface():
     global defCaptureStat,captureWindow,initWindowKilled
-    
     print('entered capture default frame')
     if not initWindowKilled:
-       camInterface.destroy()
-       initWindowKilled = True
-    print('destroyed camInterface')
+        camInterface.destroy()
+        initWindowKilled = True
+        print('destroyed camInterface')
     
+    # create window
     captureWindow = tk.Tk()
     captureWindow.title('capture window')
     captureWindow.geometry("2000x1300")
     
-    
-    
+    # create canvas
     canvas = tk.Canvas(captureWindow, width=1920, height=1080)
     canvas.place(x=30,y=60)
-    
-    
-    captureBtn = tk.Button(captureWindow,text="capture", command= captureDef)
-    captureBtn.place(x=30, y=30)
-    
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
     print('canvas created') 
 
+    #capture button
+    captureBtn = tk.Button(captureWindow,text="capture", command= captureDef)
+    captureBtn.place(x=30, y=30)    
     
     # update the video in a loop
+    
     def update_canvas():
-        print('entered update canvas')
-        while defCaptureStat:
-            if goodbyeWindow == True:
-                captureWindow.destroy()
-                print('wait')
-                time.sleep(3)
-            else:
-                captureWindow.after(100, update_canvas)
         
-        with camLock:
-            if stat:
-                frame = pic.copy()
-            
-            else:
-                print('error / cam stat is none') 
-                pass
+
+        print('updating canvas on new window')
+        if not defCaptureStat:
+            with camLock:
+                if stat:
+                    frame = pic.copy()
                 
-        frame = cv2.cvtColor(pic, cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, (int(1920),int(1080)))
-            
-        img = Image.fromarray(frame)
-        imgtk = ImageTk.PhotoImage(image=img)
+                else:
+                    print('error / cam stat is none') 
+                    pass
+    
+            frame = cv2.cvtColor(pic, cv2.COLOR_BGR2RGB)
+            frame = cv2.resize(frame, (int(1920),int(1080)))
+            img = Image.fromarray(frame)
+            imgtk = ImageTk.PhotoImage(image=img)
+            canvas.itemconfig(canvas_image, image = imgtk)
+            canvas.image = imgtk
         
-        canvas.itemconfig(canvas_image, image = imgtk)
-        canvas.image = imgtk
+        if goodbyeWindow:
+            captureWindow.destroy()
+        
         print('done')
+    
         captureWindow.after(10,update_canvas)
-        
+    
     update_canvas()
 
 def reset():
@@ -134,43 +135,41 @@ def captureDef():
     nextBtn.place(x=80, y=30)
     resetBtn = tk.Button(captureWindow, text="reset", command=reset)
     resetBtn.place(x = 150, y= 30)
-    
+
     with camLock:
         if stat:
-            print('capturing...')
             defImage = pic.copy()
-            # print(f'captured / defImage is {defImage}')
         else:
-            print('warning || captureDef failed due to camera errors')
+            print('check cam status')
             pass
+    
     captureWindow.mainloop()
         
     
 def init_compare():
     global captureWindow, defCaptureStat, goodbyeWindow
-    # goodbyeWindow = True
-    # captureWindow.destroy()
-    print('\n\nabout to initiate init_compare\n\n')
     
-    time.sleep(5)
+    goodbyeWindow = True
+    
+    print('\n\ninitating comparing process\n\n')
     
     thread1 = threading.Thread(target=get_comp_img)
     thread1.start()
+    
+    print('**thread1 started**')
+    
     thread2 = threading.Thread(target=compare)
     thread2.start()
+    
+    print('**thread2 started**')
     print('init compare started')
+
     i = 0
+    
     while not threadKill.is_set():
         i +=1
 
-frame = None
-holdFrame = None
-
-compImgLock = threading.Lock()
-
-
 def get_comp_img():
-    global holdFrame
     while not threadKill.is_set():
         with camLock:
             if stat:
@@ -184,31 +183,30 @@ def get_comp_img():
             # print(f'hold frame is {holdFrame}')
 
 def compare():
-    global frame, defImage, compImage
-    imageDef = defImage
+    global frame, compImage
     
     compareTK = tk.Tk()
     compareTK.title('compare engine v1.0')
     compareTK.geometry('1200x1000')
     compareTK.resizable(True,True)
     
-    canvas = tk.Canvas(compareTK)
-    canvas.place(x=30, y=30)
-    canvas_image = canvas.create_image(0,50,anchor=tk.NW)
+    canvas1 = tk.Canvas(compareTK)
+    canvas1.place(x=30, y=30)
+    canvas1_image = canvas1.create_image(0,50,anchor=tk.NW)
     print('canvas created')
     
     def update_canvas(image):
-        frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, (int(1920),int(1080)))
+        frame1 = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        frame1 = cv2.resize(frame, (int(1920),int(1080)))
         
-        img = Image.fromarray(frame)
-        imgtk = ImageTk.PhotoImage(image=img)
-        canvas.itemconfig(canvas_image, image= imgtk)
-        canvas.image = imgtk
+        img1 = Image.fromarray(frame1)
+        imgtk1 = ImageTk.PhotoImage(image=img1)
+        canvas1.itemconfig(canvas1_image, image= imgtk1)
+        canvas1.image = imgtk1
         print('done')
         compareTK.update()
     
-    while True:
+    while not threadKill.is_set():
         print('******************')
         print('entered comapare')
         print('******************')
@@ -235,7 +233,7 @@ def compare():
         print(f'\n\nimage compare is {imageComp}\n\ntype of image compare is {type(imageComp)}\n\n')
         
         # convert the images to grayscale
-        grayDef = cv2.cvtColor(imageDef, cv2.COLOR_BGR2GRAY)
+        grayDef = cv2.cvtColor(defImage, cv2.COLOR_BGR2GRAY)
         grayComp = cv2.cvtColor(imageComp, cv2.COLOR_BGR2GRAY)
         
         (score,diff) = compare_ssim(grayDef,grayComp,full=True)
@@ -252,7 +250,7 @@ def compare():
             # bounding box on both input images to represent where the two
             # images differ
             (x, y, w, h) = cv2.boundingRect(c)
-            cv2.rectangle(imageDef, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv2.rectangle(defImage, (x, y), (x + w, y + h), (0, 0, 255), 2)
             cv2.rectangle(imageComp, (x, y), (x + w, y + h), (0, 0, 255), 2)
         
         # imageComp = Image.fromarray(cv2.cvtColor(imageComp, cv2.COLOR_BGR2RGB))
