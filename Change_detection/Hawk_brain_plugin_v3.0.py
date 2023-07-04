@@ -22,6 +22,7 @@ default_image = None
 
 # tkinter variables
 main_tk_detection = None
+compare_interface = None
 
 # state variables
 main_killWindow = False
@@ -40,6 +41,9 @@ pic = None
 # canvas vars
 main_canvas = None
 main_canvas_image = None
+
+compare_canvas = None
+compare_canvas_image = None
 
 # thread 1 = camWork
 
@@ -70,8 +74,14 @@ def camWork():
             pass
         pic = pic
         stat = stat
-      
+
+internal_thread1 = None
+internal_thread2 = None
+
 def main_interface():
+    
+    global internal_thread1, internal_thread2
+    
     print('\nentered main interface\n')
     # define internal thread variables
     main_internal_threadKill = threading.Event()
@@ -90,6 +100,7 @@ def main_interface():
     main_canvas_image = main_canvas.create_image(0, 50, anchor=tk.NW)
 
     def internal_thread_manager():
+        global internal_thread1, internal_thread2
         internal_thread1 = threading.Thread(target= main_update_canvas)
         internal_thread2 = threading.Thread(target= main_check_kill)
         internal_thread1.start()
@@ -127,6 +138,7 @@ def main_interface():
             print('operation complete, another main tk detection')
     
     def main_check_kill():
+        print('entered main check kill')
         global main_tk_detection
         while not main_internal_threadKill.is_set():
             # print('main check kill')
@@ -134,8 +146,12 @@ def main_interface():
                 time.sleep(0.5)
                 return
             if main_killWindow:
+                main_internal_threadKill.set()
+                
                 print('attempting windowkill')
+                
                 main_tk_detection.destroy()
+                
                 print(f'capture window state is {main_tk_detection}')
             else:
                 pass
@@ -144,7 +160,8 @@ def main_interface():
         print('entered reset')
         
     def capture():
-        global default_image, default_image_state
+        
+        global default_image, default_image_state, main_killWindow
         
         with camLock:
             if stat:
@@ -155,7 +172,7 @@ def main_interface():
         default_image = default_image
         default_image_state = True
         
-        main_nextBtn = tk.Button(main_tk_detection, text="next", command=main_check_kill)
+        main_nextBtn = tk.Button(main_tk_detection, text="next", command=init_compare)
         main_nextBtn.place(x=80, y=30)
         
         main_resetBtn = tk.Button(main_tk_detection, text="reset", command=main_reset)
@@ -169,8 +186,97 @@ def main_interface():
     print('\n\ndone!\n\n')
     main_tk_detection.mainloop()
 
+def init_compare():
+    global main_killWindow, compare_interface, compare_canvas, compare_canvas_image, compare_threadKill, compare_threadPause
+    
+    # kill window var
+    main_killWindow = True
+    print(f'main kill window is set to {main_killWindow}')
+    print('\ninitiating comparison process\n')
+    
+    # create thread vars
+    compare_threadKill = threading.Event()
+    compare_threadPause = threading.Event()
 
+    # comparison interface creation
+    compare_interface = tk.Tk()
+    compare_interface.title('Compare Plugin v3.0')
+    compare_interface.geometry("1200x1000")
+    compare_interface.resizable(True,True)
+    
+    # create canvas
+    compare_canvas = tk.Canvas(compare_interface)
+    compare_canvas.place(x=30, y=30)
+    compare_canvas_image = compare_canvas.create_image(0,50,anchor=tk.NW)
+    
+    print('window created and canvas created')
+    
+    compare_thread1 = threading.Thread(target= compare())
+    compare_thread1.start()
+    print(f'thread 1 initiated and state is {compare_thread1.is_alive()}')    
+    
+    compare()
+    
+    
+def compare():
+    global default_image,compare_canvas, compare_canvas_image, compare_interface
+    if not compare_threadKill.is_set():
+        if not compare_threadPause.is_set():
+            print('******************')
+            print('entered internal comparison')
+            print('******************')
+            
+            # get current frame
+            with camLock:
+                if stat:
+                    current_frame = pic.copy()
+                else:
+                    tk.messagebox.showinfo(title= "warning", message= "something is wrong at line 224")
+                    
+            current_frame = current_frame
 
+            grayDef = cv2.cvtColor(default_image, cv2.COLOR_BGR2GRAY)
+            grayComp = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
+
+            (score,diff) = compare_ssim(grayDef,grayComp,full=True)
+            diff = (diff*255).astype("uint8")
+            print(f"SSIM comparison score : {score}")
+            # threshold the difference image, followed by finding contours to
+            # obtain the regions of the two input images that differ
+            thresh = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+            cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = imutils.grab_contours(cnts)
+            # loop over the contours
+            for c in cnts:
+                # compute the bounding box of the contour and then draw the
+                # bounding box on both input images to represent where the two
+                # images differ
+                (x, y, w, h) = cv2.boundingRect(c)
+                cv2.rectangle(default_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                cv2.rectangle(current_frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            
+            # now default image and current frame has boxes
+            current_frame = cv2.resize(current_frame, (int(1920),int(1080)))
+            current_frame = Image.fromarray(cv2.cvtColor(current_frame, cv2.COLOR_BGR2RGB))
+            # current_image = Image.fromarray(current_frame)
+            # default_image = Image.fromarray(cv2.cvtColor(default_image, cv2.COLOR_BGR2RGB))
+            
+            print(f'type of the images are {type(current_frame)} and {type(default_image)}')
+            
+            
+            current_image_tk = ImageTk.PhotoImage(image= current_frame)
+            compare_canvas.itemconfig(main_canvas_image, image= current_image_tk)
+            compare_canvas.image= current_image_tk
+            
+            compare_interface.after(10, compare)
+        else:
+            print('pause set')
+            time.sleep(1.5)
+            
+
+    
+    
+    
 def exitter():
     threadKill.set()
     print('threadkill set')
