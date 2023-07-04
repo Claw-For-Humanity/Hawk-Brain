@@ -57,14 +57,14 @@ def __init__():
 def camWork():
     global pic, stat
     while not threadKill.is_set():
-        print('camwork thread working')
+        # print('camwork thread working')
         ret, frame = cam.read()
         if ret:
             with camLock:
                 global pic,stat
                 pic = frame.copy()
                 stat = ret
-                print('camwork thread working, stat is {}'.format(stat))
+                # print('camwork thread working, stat is {}'.format(stat))
         else:
             tk.messagebox.showinfo(title = 'Warning', message = 'No Camera Avail.')
             pass
@@ -88,28 +88,26 @@ def main_interface():
     main_canvas = tk.Canvas(main_tk_detection, width=1920, height=1080)
     main_canvas.place(x=30,y=60)
     main_canvas_image = main_canvas.create_image(0, 50, anchor=tk.NW)
-    print('*****')
-    print(f'main canvas image type is {type(main_canvas_image)}')
-    print('*****')
-    
-    print('main canvas is {}'.format(main_canvas))
 
     def internal_thread_manager():
-        # internal_thread1 = threading.Thread(target= main_update_canvas)
+        internal_thread1 = threading.Thread(target= main_update_canvas)
         internal_thread2 = threading.Thread(target= main_check_kill)
-        # internal_thread1.start()
+        internal_thread1.start()
         internal_thread2.start()
 
-        main_update_canvas()
+        # main_update_canvas()
 
         print('both thread started')
         time.sleep(0.5)
 
     def main_update_canvas():
-        global default_image, main_canvas, main_canvas_image
-        if not main_internal_threadKill.is_set():
-            if not main_internal_threadPause.is_set():
-                print('entered main_update_canvas')
+        print('\n\nmain update canvas entered\n\n')
+
+        global default_image, main_canvas, main_canvas_image, main_tk_detection
+        
+        while not main_internal_threadKill.is_set():
+            if not main_internal_threadPause.is_set() and not default_image_state:
+                print('passed thread checks')
                 
                 # receive frames
                 with camLock:
@@ -117,20 +115,16 @@ def main_interface():
                         main_frame = pic.copy()
                     else:
                         tk.messagebox.showinfo(titie = 'warning', message = 'not possible @ line 95')            
-                main_frame = main_frame
-                print(f'type of the main frame is {type(main_frame)}')
+                
+                main_frame = main_frame               
                 main_frame = cv2.cvtColor(main_frame, cv2.COLOR_BGR2RGB)
                 main_frame = cv2.resize(main_frame, (int(1920),int(1080)))
-
-
                 main_image = Image.fromarray(main_frame)
                 main_image_tk = ImageTk.PhotoImage(image= main_image)
-                print(f'type of main_image_tk is {type(main_image_tk)}')
-                print(f'type of the main canvas is {type(main_canvas)}')
-                print(f'type of main_canvas image is {type(main_canvas_image)}')
                 main_canvas.itemconfig(main_canvas_image, image= main_image_tk)
                 main_canvas.image= main_image_tk
-            main_tk_detection.after(10,main_update_canvas)
+            
+            print('operation complete, another main tk detection')
     
     def main_check_kill():
         global main_tk_detection
@@ -172,6 +166,8 @@ def main_interface():
 
 
     internal_thread_manager()
+    print('\n\ndone!\n\n')
+    main_tk_detection.mainloop()
 
 
 
