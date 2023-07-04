@@ -102,12 +102,22 @@ def main_interface():
         if not main_internal_threadKill.is_set():
             if not main_internal_threadPause.is_set():
                 print('entered main_update_canvas')
+                
+                # receive frames
                 with camLock:
                     if stat:
-                        default_image = pic.copy()
+                        main_frame = pic.copy()
                     else:
                         tk.messagebox.showinfo(titie = 'warning', message = 'not possible @ line 95')            
-                default_image = default_image
+                main_frame = main_frame
+
+                main_frame = cv2.cvtColor(main_frame, cv2.COLOR_BGR2RGB)
+                main_frame = cv2.resize(main_frame, (int(1920),int(1080)))
+
+                main_image = Image.fromarray(main_frame)
+                main_image_tk = ImageTk.PhotoImage(image= main_image)
+                main_canvas.config(main_canvas_image, image= main_image_tk)
+                main_canvas.image= main_image_tk
             main_tk_detection.after(10,main_update_canvas)
     
     def main_check_kill():
