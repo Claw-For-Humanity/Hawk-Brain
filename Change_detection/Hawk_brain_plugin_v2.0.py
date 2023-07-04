@@ -15,14 +15,18 @@ import threading
 from PIL import Image, ImageTk
 import time
 
-
+# threads
 compImgLock = threading.Lock()
 camLock = threading.Lock()
 threadKill = threading.Event()
+threadPause = threading.Event()
+
+
 
 # image variables
 defImage = None
 compImage = None
+compare_ready = False
 
 goodbyeWindow = False
 defCaptureStat = False
@@ -30,6 +34,12 @@ initWindowKilled = False
 
 frame = None
 holdFrame = None
+
+# trace
+count_compare = 0
+count_updateWindow = 0
+count_captureUpdate = 0
+count_initComp = 0
 
 
 # interface
@@ -66,6 +76,7 @@ def interface_cam():
     
     camInterface.mainloop()
 
+captureWindow = None
 def CaptureInterface():
     global defCaptureStat,captureWindow,initWindowKilled
     print('entered capture default frame')
@@ -85,16 +96,10 @@ def CaptureInterface():
     canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
     print('canvas created') 
 
-    #capture button
-    captureBtn = tk.Button(captureWindow,text="capture", command= captureDef)
-    captureBtn.place(x=30, y=30)    
-    
     # update the video in a loop
-    
     def update_canvas():
-        
-
         print('updating canvas on new window')
+        print(f'\ngoodbye window state is {goodbyeWindow}\n')
         if not defCaptureStat:
             with camLock:
                 if stat:
@@ -110,13 +115,55 @@ def CaptureInterface():
             imgtk = ImageTk.PhotoImage(image=img)
             canvas.itemconfig(canvas_image, image = imgtk)
             canvas.image = imgtk
-        
-        if goodbyeWindow:
-            captureWindow.destroy()
-        
         print('done')
-    
         captureWindow.after(10,update_canvas)
+
+
+    def checkKill():
+        global captureWindow, compare_ready
+        print('entered checkKill')
+        print(f'goodbyewindow state is {goodbyeWindow}')
+        
+        if goodbyeWindow: 
+            print('attempting windowkill')
+            captureWindow.destroy()
+            print(f'capture window state is {captureWindow}')
+            captureWindow = None
+            if captureWindow == None:
+                print('window is completely destroyed')
+                init_compare()
+            else:
+                captureWindow.after(10, checkKill)
+        else:
+            print('line 125 -- standby for goodbye window')
+            captureWindow.after(100, checkKill)
+    
+    def captureDef():
+        global defImage, defCaptureStat
+        print('capturing default frame')
+        
+        defCaptureStat = True
+        def set_windowKill():
+            global goodbyeWindow
+            goodbyeWindow = True
+            checkKill()
+        nextBtn = tk.Button(captureWindow, text="next", command=set_windowKill)
+        nextBtn.place(x=80, y=30)
+        resetBtn = tk.Button(captureWindow, text="reset", command=reset)
+        resetBtn.place(x = 150, y= 30)
+
+        with camLock:
+            if stat:
+                defImage = pic.copy()
+            else:
+                print('check cam status')
+                pass
+        
+        captureWindow.after(10, checkKill)
+        
+    # capture button
+    captureBtn = tk.Button(captureWindow,text="capture", command= captureDef)
+    captureBtn.place(x=30, y=30)  
     
     update_canvas()
 
@@ -125,109 +172,94 @@ def reset():
     captureWindow.destroy()
     CaptureInterface()
 
-def captureDef():    
-    global defImage, defCaptureStat
-    print('capturing default frame')
-    
-    defCaptureStat = True
-    
-    nextBtn = tk.Button(captureWindow, text="next", command=init_compare)
-    nextBtn.place(x=80, y=30)
-    resetBtn = tk.Button(captureWindow, text="reset", command=reset)
-    resetBtn.place(x = 150, y= 30)
+def killwindow():
+    global goodbyeWindow
+    while not threadKill.is_set():
+        goodbyeWindow = True
+        print(f'goodbyewindow is {goodbyeWindow}')
 
-    with camLock:
-        if stat:
-            defImage = pic.copy()
-        else:
-            print('check cam status')
-            pass
-    
-    captureWindow.mainloop()
-        
-    
 def init_compare():
-    global captureWindow, defCaptureStat, goodbyeWindow
-    
-    goodbyeWindow = True
+    global captureWindow, defCaptureStat, goodbyeWindow, count_initComp
     
     print('\n\ninitating comparing process\n\n')
-    
     thread1 = threading.Thread(target=get_comp_img)
-    thread1.start()
+    # thread1.start()
     
     print('**thread1 started**')
     
     thread2 = threading.Thread(target=compare)
-    thread2.start()
+    # thread2.start()
     
     print('**thread2 started**')
     print('init compare started')
 
-    i = 0
     
     while not threadKill.is_set():
-        i +=1
+        print('working...')
+        time.sleep(1)
+        count_initComp += 1
 
 def get_comp_img():
+    global count_captureUpdate
     while not threadKill.is_set():
         with camLock:
             if stat:
                 tempFrame = pic.copy()
-        
-        # print(f'tempframe is {tempFrame}')
-        
         with compImgLock:
             global holdFrame
             holdFrame = tempFrame.copy()
-            # print(f'hold frame is {holdFrame}')
+        
+        count_captureUpdate += 1
 
 def compare():
+    print('entered compare ')
+    
     global frame, compImage
     
-    compareTK = tk.Tk()
+    compareTK = tk.Toplevel()
     compareTK.title('compare engine v1.0')
     compareTK.geometry('1200x1000')
     compareTK.resizable(True,True)
+    print('line 196 -- window is created')
     
     canvas1 = tk.Canvas(compareTK)
     canvas1.place(x=30, y=30)
     canvas1_image = canvas1.create_image(0,50,anchor=tk.NW)
-    print('canvas created')
+    print('line 201 -- canvas created')
     
     def update_canvas(image):
+        print('entered update_canvas')
+        global count_updateWindow
         frame1 = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        frame1 = cv2.resize(frame, (int(1920),int(1080)))
+        frame1 = cv2.resize(frame1, (int(1920),int(1080)))
         
         img1 = Image.fromarray(frame1)
         imgtk1 = ImageTk.PhotoImage(image=img1)
         canvas1.itemconfig(canvas1_image, image= imgtk1)
         canvas1.image = imgtk1
-        print('done')
-        compareTK.update()
+        print('line 211 update canvas done')
+        
+        count_updateWindow += 1
+        
+        compareTK.after(100,internal_comparison)
     
-    while not threadKill.is_set():
+    def internal_comparison():
+        global count_compare
         print('******************')
-        print('entered comapare')
+        print('entered internal comparison')
+        print(f'[LOG] count compare happened {count_compare} times')
         print('******************')
                 
         with compImgLock:
             if type(holdFrame) != type(None):
-                frame = holdFrame.copy()
+                imageComp = holdFrame.copy()
             else:
                 print(f'warning check holdFrame type || {type(holdFrame)}')
-        
-        
-        if type(frame) == type(None):
+          
+        if type(imageComp) == type(None):
             print('warning! camera frame == None')
-            print(f'type of frame is {type(frame)}')
+            print(f'type of frame is {type(imageComp)}')
             return
-        else:
-            pass
-        
-    
-        
-        imageComp = frame
     
         # print(f'\n\nimageDef is {imageDef}\n\ntype of imageDef is {type(imageDef)}\n\n')
         print(f'\n\nimage compare is {imageComp}\n\ntype of image compare is {type(imageComp)}\n\n')
@@ -256,15 +288,29 @@ def compare():
         # imageComp = Image.fromarray(cv2.cvtColor(imageComp, cv2.COLOR_BGR2RGB))
         # imageDef = Image.fromarray(cv2.cvtColor(imageDef, cv2.COLOR_BGR2RGB))
         
-        
-        
-        compareTK.after(10,func=lambda:update_canvas(imageComp))
+        count_compare += 1
         print('line 230 done')
         print('line 233 done')
-        compareTK.mainloop()
+        update_canvas(imageComp)
+        
+    internal_comparison()
         
 __init__()
 
+
+if compare_ready:
+    print('\n\nentering sleep\n\n')
+    time.sleep(10)
+    print(f'compare ready : {compare_ready}')
+
+
 threadKill.set()
 print('thread kill set')
+
+print(f'[LOG] init_comparison happened {count_initComp} times')
+print(f'[LOG] get_comp_img happened {count_captureUpdate}times')
+print(f'[LOG] update window happened {count_updateWindow} times')
+print(f'[LOG] line 224 internal comparison happened {count_compare} times')
+
+
 exit()
