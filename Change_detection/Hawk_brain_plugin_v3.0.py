@@ -29,6 +29,7 @@ compare_interface = None
 # state variables
 main_killWindow = False
 default_image_state = False
+compare_ready = False
 
 # thread variables
 threadKill = threading.Event()
@@ -212,8 +213,12 @@ def init_compare():
     
     # define update canvas
     def compare_update_canvas():
+        global compare_ready
         print('entered compare update canvas @ line 216')
-        if not compare_threadKill:
+        while compare_ready != True:
+            print('wait! - line 219')
+            time.sleep(10)
+        while not compare_threadKill :
             if not compare_threadPause:
                 print('passed thread check -- line 218')
                 with compareLock:
@@ -224,32 +229,37 @@ def init_compare():
             
             currentFrame = cv2.resize(currentFrame, (int(1920),int(1080)))
             
-            defaultFrame = cv2.resize(currentFrame, int(1920),int(1080))
+            # defaultFrame = cv2.resize(currentFrame, int(1920),int(1080))
             
             currentFrame = Image.fromarray(cv2.cvtColor(currentFrame, cv2.COLOR_BGR2RGB))
             
-            defaultFrame = Image.fromarray(cv2.cvtColor(defaultFrame, cv2.COLOR_BGR2RGB))
+            # defaultFrame = Image.fromarray(cv2.cvtColor(defaultFrame, cv2.COLOR_BGR2RGB))
             
             current_image_tk = ImageTk.PhotoImage(image=currentFrame)
             compare_canvas.itemconfig(compare_canvas_image,image = current_image_tk)
             compare_canvas.image = current_image_tk
-        compare_interface.after(10, compare_update_canvas)
+            print('process done')
+            compare_ready = True
+        # compare_interface.after(100, compare_update_canvas)
     
     
     # update canvas thread
     
-    # compare_thread2 = threading.Thread(target= compare_update_canvas)
-    # compare_thread2.start()
+    
     
     compare_thread1 = threading.Thread(target= compare)
     compare_thread1.start()
-    print('\nthread1 started\n')
-    compare_update_canvas()
     
+    compare_thread2 = threading.Thread(target= compare_update_canvas)
+    compare_thread2.start()
+    print('\nthread1 started\n')
+    
+    # compare_update_canvas()
+    compare_interface.mainloop()
     
     
 def compare():
-    global default_image,compare_canvas, compare_canvas_image, compare_interface, returnFrame_current, returnFrame_default
+    global default_image,compare_canvas, compare_canvas_image, compare_interface, returnFrame_current, returnFrame_default, compare_ready
     while not compare_threadKill.is_set():
         if not compare_threadPause.is_set():
             print('******************')
@@ -262,8 +272,6 @@ def compare():
                     current_frame = pic.copy()
                 else:
                     tk.messagebox.showinfo(title= "warning", message= "something is wrong at line 224")
-                    
-            current_frame = current_frame
 
             grayDef = cv2.cvtColor(default_image, cv2.COLOR_BGR2GRAY)
             grayComp = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
@@ -293,8 +301,9 @@ def compare():
                     # change this if return value is nonetype
             # returnFrame_default = returnFrame_default
             # returnFrame_current = returnFrame_current
-            
+            time.sleep(1)
             print('compare done')
+            compare_ready = True
 
     
     
