@@ -217,7 +217,7 @@ def init_compare():
         print('entered compare update canvas @ line 216')
         while compare_ready != True:
             print('wait! - line 219')
-            time.sleep(10)
+            time.sleep(1)
         while not compare_threadKill :
             if not compare_threadPause:
                 print('passed thread check -- line 218')
