@@ -19,6 +19,8 @@ from tkinter import messagebox
 
 # image values
 default_image = None
+returnFrame_current = None
+returnFrame_default = None
 
 # tkinter variables
 main_tk_detection = None
@@ -32,6 +34,7 @@ default_image_state = False
 threadKill = threading.Event()
 threadPause = threading.Event()
 camLock = threading.Lock()
+compareLock = threading.Lock()
 
 # camera vars
 cam = cv2.VideoCapture(0)
@@ -151,8 +154,6 @@ def main_interface():
                 print('attempting windowkill')
                 
                 main_tk_detection.destroy()
-                
-                print(f'capture window state is {main_tk_detection}')
             else:
                 pass
         
@@ -209,18 +210,47 @@ def init_compare():
     compare_canvas.place(x=30, y=30)
     compare_canvas_image = compare_canvas.create_image(0,50,anchor=tk.NW)
     
-    print('window created and canvas created')
+    # define update canvas
+    def compare_update_canvas():
+        print('entered compare update canvas @ line 216')
+        if not compare_threadKill:
+            if not compare_threadPause:
+                print('passed thread check -- line 218')
+                with compareLock:
+                    currentFrame = returnFrame_current
+                    defaultFrame = returnFrame_default
+                print(f'currentFrame is {currentFrame}')
+                print(f'defaultFrame is {defaultFrame}')
+            
+            currentFrame = cv2.resize(currentFrame, (int(1920),int(1080)))
+            
+            defaultFrame = cv2.resize(currentFrame, int(1920),int(1080))
+            
+            currentFrame = Image.fromarray(cv2.cvtColor(currentFrame, cv2.COLOR_BGR2RGB))
+            
+            defaultFrame = Image.fromarray(cv2.cvtColor(defaultFrame, cv2.COLOR_BGR2RGB))
+            
+            current_image_tk = ImageTk.PhotoImage(image=currentFrame)
+            compare_canvas.itemconfig(compare_canvas_image,image = current_image_tk)
+            compare_canvas.image = current_image_tk
+        compare_interface.after(10, compare_update_canvas)
     
-    compare_thread1 = threading.Thread(target= compare())
+    
+    # update canvas thread
+    
+    # compare_thread2 = threading.Thread(target= compare_update_canvas)
+    # compare_thread2.start()
+    
+    compare_thread1 = threading.Thread(target= compare)
     compare_thread1.start()
-    print(f'thread 1 initiated and state is {compare_thread1.is_alive()}')    
+    print('\nthread1 started\n')
+    compare_update_canvas()
     
-    compare()
     
     
 def compare():
-    global default_image,compare_canvas, compare_canvas_image, compare_interface
-    if not compare_threadKill.is_set():
+    global default_image,compare_canvas, compare_canvas_image, compare_interface, returnFrame_current, returnFrame_default
+    while not compare_threadKill.is_set():
         if not compare_threadPause.is_set():
             print('******************')
             print('entered internal comparison')
@@ -255,24 +285,16 @@ def compare():
                 cv2.rectangle(default_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
                 cv2.rectangle(current_frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
             
-            # now default image and current frame has boxes
-            current_frame = cv2.resize(current_frame, (int(1920),int(1080)))
-            current_frame = Image.fromarray(cv2.cvtColor(current_frame, cv2.COLOR_BGR2RGB))
-            # current_image = Image.fromarray(current_frame)
-            # default_image = Image.fromarray(cv2.cvtColor(default_image, cv2.COLOR_BGR2RGB))
+            with compareLock:
+                global returnFrame_current, returnFrame_default
+                returnFrame_current = current_frame
+                returnFrame_default = default_image
+                    
+                    # change this if return value is nonetype
+            # returnFrame_default = returnFrame_default
+            # returnFrame_current = returnFrame_current
             
-            print(f'type of the images are {type(current_frame)} and {type(default_image)}')
-            
-            
-            current_image_tk = ImageTk.PhotoImage(image= current_frame)
-            compare_canvas.itemconfig(main_canvas_image, image= current_image_tk)
-            compare_canvas.image= current_image_tk
-            
-            compare_interface.after(10, compare)
-        else:
-            print('pause set')
-            time.sleep(1.5)
-            
+            print('compare done')
 
     
     
