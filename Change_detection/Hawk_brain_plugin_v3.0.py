@@ -81,10 +81,11 @@ def camWork():
 
 internal_thread1 = None
 internal_thread2 = None
+main_internal_threadKill = None
+main_internal_threadPause = None
 
 def main_interface():
-    
-    global internal_thread1, internal_thread2
+    global internal_thread1, internal_thread2, main_internal_threadKill, main_internal_threadPause
     
     print('\nentered main interface\n')
     # define internal thread variables
@@ -139,7 +140,7 @@ def main_interface():
                 main_canvas.itemconfig(main_canvas_image, image= main_image_tk)
                 main_canvas.image= main_image_tk
             
-            print('operation complete, another main tk detection')
+            print(f'operation complete, another main tk detection || threadkill state is {main_internal_threadKill.is_set()}')
     
     def main_check_kill():
         print('entered main check kill')
@@ -150,7 +151,7 @@ def main_interface():
                 time.sleep(0.5)
                 return
             if main_killWindow:
-                main_internal_threadKill.set()
+                # main_internal_threadKill.set()
                 
                 print('attempting windowkill')
                 
@@ -189,10 +190,14 @@ def main_interface():
     main_tk_detection.mainloop()
 
 def init_compare():
-    global main_killWindow, compare_interface, compare_canvas, compare_canvas_image, compare_threadKill, compare_threadPause
+    global main_killWindow, compare_interface, compare_canvas, compare_canvas_image, compare_threadKill, compare_threadPause, main_internal_threadPause, main_internal_threadKill
     
     # kill window var
-    main_killWindow = True
+    # main_killWindow = True
+    main_internal_threadPause.set()
+    
+    main_internal_threadKill.set()
+    
     print(f'main kill window is set to {main_killWindow}')
     print('\ninitiating comparison process\n')
     
@@ -217,9 +222,15 @@ def init_compare():
         print('entered compare update canvas @ line 216')
         while compare_ready != True:
             print('wait! - line 219')
+<<<<<<< Updated upstream
             time.sleep(1)
         while not compare_threadKill :
             if not compare_threadPause:
+=======
+            time.sleep(10)
+        while not compare_threadKill.is_set():
+            if compare_threadPause.is_set():
+>>>>>>> Stashed changes
                 print('passed thread check -- line 218')
                 with compareLock:
                     currentFrame = returnFrame_current
