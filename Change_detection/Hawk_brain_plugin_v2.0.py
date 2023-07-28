@@ -77,13 +77,10 @@ def interface_cam():
     camInterface.mainloop()
 
 captureWindow = None
+
 def CaptureInterface():
     global defCaptureStat,captureWindow,initWindowKilled
     print('entered capture default frame')
-    if not initWindowKilled:
-        camInterface.destroy()
-        initWindowKilled = True
-        print('destroyed camInterface')
     
     # create window
     captureWindow = tk.Tk()
@@ -117,7 +114,6 @@ def CaptureInterface():
             canvas.image = imgtk
         print('done')
         captureWindow.after(10,update_canvas)
-
 
     def checkKill():
         global captureWindow, compare_ready
@@ -183,7 +179,7 @@ def init_compare():
     
     print('\n\ninitating comparing process\n\n')
     thread1 = threading.Thread(target=get_comp_img)
-    # thread1.start()
+    thread1.start()
     
     print('**thread1 started**')
     
@@ -202,6 +198,7 @@ def init_compare():
 def get_comp_img():
     global count_captureUpdate
     while not threadKill.is_set():
+        print('get compare image')
         with camLock:
             if stat:
                 tempFrame = pic.copy()
