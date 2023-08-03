@@ -212,7 +212,7 @@ def init_compare():
     compare_interface.resizable(True,True)
     
     # create canvas
-    compare_canvas = tk.Canvas(compare_interface)
+    compare_canvas = tk.Canvas(compare_interface, width= 1000, height= 1000)
     compare_canvas.place(x=30, y=30)
     compare_canvas_image = compare_canvas.create_image(0,50,anchor=tk.NW)
     
@@ -222,15 +222,9 @@ def init_compare():
         print('entered compare update canvas @ line 216')
         while compare_ready != True:
             print('wait! - line 219')
-<<<<<<< Updated upstream
             time.sleep(1)
         while not compare_threadKill :
             if not compare_threadPause:
-=======
-            time.sleep(10)
-        while not compare_threadKill.is_set():
-            if compare_threadPause.is_set():
->>>>>>> Stashed changes
                 print('passed thread check -- line 218')
                 with compareLock:
                     currentFrame = returnFrame_current
