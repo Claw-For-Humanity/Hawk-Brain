@@ -204,7 +204,7 @@ class Hawk_Brain:
 
         
         receiveVal()
-        btn = tk.Button(window, text='Next', command=lambda: camera_Setting(camList_val.get(), comList_val.get(),baud_val.get()))
+        btn = tk.Button(window, text='Next', command=lambda: Hawk_Brain.camera_Setting(camList_val.get(), comList_val.get(),baud_val.get()))
         btn.place(x= defaultLocX+10, y= 200)
         
         window.mainloop()
@@ -230,7 +230,7 @@ class Hawk_Brain:
             print('camera captured successfully \n')
         else:
             tk.messagebox.showinfo(title= 'warninig', message = 'camera encountered problem // line 165 // unknown issue // exitting')
-            camera_Setting(int(camPort), comPort, bdrate)
+            Hawk_Brain.camera_Setting(int(camPort), comPort, bdrate)
         
         # create window
         global camWindow,alta
@@ -250,12 +250,12 @@ class Hawk_Brain:
         height.place(x=90,y=30)
         
         if width != 'None':
-            width.insert(0,prevData["width"])
+            width.insert(0,Hawk_Brain.prevData["width"])
         else:
             pass
             
         if height != 'None':
-            height.insert(0,prevData["height"])
+            height.insert(0,Hawk_Brain.prevData["height"])
         else:
             pass
         
@@ -272,7 +272,7 @@ class Hawk_Brain:
                 pass
             print('entered adjust resolution')
             
-            camDisplayer(width, height, communication)
+            Hawk_Brain.camDisplayer(width, height, communication)
             
         
         recommend = tk.Label(camWindow, text=f'recommended camera resolution is {int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))}')
@@ -288,9 +288,9 @@ class Hawk_Brain:
         print('thread entered')
         def update():
             global std 
-            while not killFlag.is_set():
+            while not Hawk_Brain.killFlag.is_set():
                 ret, frame = cam.read()
-                with cam_lock:
+                with Hawk_Brain.cam_lock:
                     global std
                     if ret:
                         std = frame.copy()
@@ -331,20 +331,20 @@ class Hawk_Brain:
         
         camWindow.geometry(f"{resolutionX + 400 }x{resolutionY + 400}")
         print('about to start thread')
-        threadVid()
+        Hawk_Brain.threadVid()
         print('successfully initiated thread')
         canvas = tk.Canvas(camWindow, width=displayResX, height=displayResY)
         canvas.place(x=30,y=60)
         
         canvas_image = canvas.create_image(0, 50, anchor=tk.NW)
         print('canvas created')
-        comCall = tk.Button(camWindow, text='next', command=lambda: __initCom__(communication))    
+        comCall = tk.Button(camWindow, text='next', command=lambda: Hawk_Brain.__initCom__(communication))    
         
 
         # update the video in a loop
         def update_canvas():
             global comCallInt
-            with cam_lock:
+            with Hawk_Brain.cam_lock:
                 if type(std) != type(None):
                     pic = std.copy()
                 else:
@@ -387,7 +387,7 @@ class Hawk_Brain:
         portInfo = tk.Label(comWindow, text=f'comport connection check // selected comport is {communication[0]} // selected baud rate is {communication[1]}')
         portInfo.place(x=30, y=15)
         
-        cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: logOpen(communication))
+        cntBtn = tk.Button(comWindow, text= 'Connect', command=lambda: Hawk_Brain.logOpen(communication))
         cntBtn.place(x= 30, y= 90)
         comWindow.mainloop()
         
@@ -403,11 +403,11 @@ class Hawk_Brain:
         serialInst.write(f"{data}".encode())    
 
     def receive(serialInst):
-        while not killFlag.is_set():
+        while not Hawk_Brain.killFlag.is_set():
             if type(serialInst) != type(None):
                 if serialInst.in_waiting > 0:
                     decoded = serialInst.readline().decode().strip() # Read data from the serial port
-                    with receiveLock:
+                    with Hawk_Brain.receiveLock:
                         global decodedData, incomingState
                         if decoded != None:
                             incomingState = True
@@ -417,16 +417,16 @@ class Hawk_Brain:
                             decodedData = None
                             
     def update_gui():
-        with receiveLock:
+        with Hawk_Brain.receiveLock:
             global decodedData, incomingState, loggingbox
             if incomingState == True:
-                log(text_widget, f'incoming bytes from arduino {decodedData}')
+                Hawk_Brain.log(text_widget, f'incoming bytes from arduino {decodedData}')
                 
             elif incomingState == False: 
-                log(text_widget, f'waiting for incoming bytes from arduino')
+                Hawk_Brain.log(text_widget, f'waiting for incoming bytes from arduino')
 
             # check incoming data every second
-            loggingbox.after(1000, update_gui) 
+            loggingbox.after(1000, Hawk_Brain.update_gui) 
 
     def logOpen(communication):
         
@@ -434,7 +434,7 @@ class Hawk_Brain:
         global serialInst, text_widget,loggingbox,thread2
         print('about to start thread 2')
         serialInst = serial.Serial(port=str(communication[0]),baudrate= int(communication[1]))
-        thread2 = threading.Thread(target=receive, args=(serialInst,))
+        thread2 = threading.Thread(target=Hawk_Brain.receive, args=(serialInst,))
         thread2.start()
         
         print(f'thread 2 is started state is : {thread2.is_alive()}')
@@ -443,10 +443,10 @@ class Hawk_Brain:
         loggingbox = tk.Tk()
         loggingbox.title('logging box')   
         
-        with receiveLock:
+        with Hawk_Brain.receiveLock:
             if decodedData == None:
                 print('check arduino')
-                nxt_btn = tk.Button(loggingbox, text="next", command=lambda: colourInterface())
+                nxt_btn = tk.Button(loggingbox, text="next", command=lambda: Hawk_Brain.colourInterface())
                 nxt_btn.place(x=70, y=90)
             else:
                 pass
@@ -458,16 +458,16 @@ class Hawk_Brain:
         text_widget = tk.Text(loggingbox, height=20, width=80)
         text_widget.pack()
         enter_widget = tk.Entry(loggingbox, width= 18)
-        snd_btn = tk.Button(loggingbox, text='send', command=lambda: send(str(enter_widget.get())), width= 2)
+        snd_btn = tk.Button(loggingbox, text='send', command=lambda: Hawk_Brain.send(str(enter_widget.get())), width= 2)
         snd_btn.place(x=20, y= 90)
         enter_widget.pack()
         
-        log(text_widget, "communication established and waiting for response")
+        Hawk_Brain.log(text_widget, "communication established and waiting for response")
 
         
-        log(text_widget, f"thread called and thread state is {thread2.is_alive}")
+        Hawk_Brain.log(text_widget, f"thread called and thread state is {thread2.is_alive}")
             
-        loggingbox.after(10, update_gui)
+        loggingbox.after(10, Hawk_Brain.update_gui)
     
     def send_safety(data):
         global serialInst, sent
@@ -505,20 +505,20 @@ class Hawk_Brain:
         blue_upper_colour = np.array([126,255,255])
         
         def resetblu():
-            with detectionLock:
+            with Hawk_Brain.detectionLock:
                 global ptBlue
                 ptBlue = None
         
         def resetRed():
-            with detectionLock:
+            with Hawk_Brain.detectionLock:
                 global ptRed
                 ptRed = None
         
         # start thread for boxcheck
-        thread4 = threading.Thread(target= boxCheck)
+        thread4 = threading.Thread(target= Hawk_Brain.boxCheck)
         thread4.start()
         
-        while not threadKill.is_set():
+        while not Hawk_Brain.threadKill.is_set():
             def lineColour(distance):
                 if distance != None:
                     if distance >= 0: # blue
@@ -532,7 +532,7 @@ class Hawk_Brain:
                 center = (int((point1[0] + point2[0])/2),int((point2[1] + point2[1])/2 + 10))
                 return center
                 
-            with camLock:
+            with Hawk_Brain.camLock:
                 video = std
             global result
             bottomHsv = cv2.cvtColor(video, cv2.COLOR_BGR2HSV)
@@ -552,7 +552,7 @@ class Hawk_Brain:
                         if selectedColour['red'] == True:
                             cv2.rectangle(redVid,(red[0],red[1]),(red[0]+red[2],red[1]+red[3]),(172,0,179),2)
                             cv2.circle(redVid, centerred, 1, (255,0,0) ,thickness=3)
-                            with detectionLock:
+                            with Hawk_Brain.detectionLock:
                                 global ptRed
                                 ptRed = centerred
                                 
@@ -571,7 +571,7 @@ class Hawk_Brain:
                         if selectedColour['blue'] == True:
                             cv2.rectangle(bluVid,(blu[0],blu[1]),(red[0]+blu[2],blu[1]+blu[3]),(172,0,179),2)
                             cv2.circle(bluVid, centerBlu, 1, (255,0,0) ,thickness=3)
-                            with detectionLock:
+                            with Hawk_Brain.detectionLock:
                                 global ptBlue
                                 ptBlue = centerBlu
                                 # ptBlue = (int((bx+bw)/2), int((by+bh)/2))
@@ -582,10 +582,10 @@ class Hawk_Brain:
             
             centerObj = int(objectX+ (0.5 * objectW)),int(objectY + (0.5 * objectH))
             
-            with distanceLock:
+            with Hawk_Brain.distanceLock:
                 if boxCheckStat == True:
-                    dR = distanceCalc("red", ptRed)
-                    dB = distanceCalc("blue",ptBlue)
+                    dR = Hawk_Brain.distanceCalc("red", ptRed)
+                    dB = Hawk_Brain.distanceCalc("blue",ptBlue)
                     
                 else:
                     dR = None
@@ -614,7 +614,7 @@ class Hawk_Brain:
             cv2.circle(result, centerObj, 1, (255,0,0) ,thickness=5)
             
             frame = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
-            with detectionLock:
+            with Hawk_Brain.detectionLock:
                 global vidResult, img
                 vidResult = result
                 img = Image.fromarray(frame)
@@ -635,17 +635,17 @@ class Hawk_Brain:
         while readyDetection == False:
             print('boxCheck waiting for __detection__')
         
-        while not threadKill.is_set():
-            with detectionLock:
+        while not Hawk_Brain.threadKill.is_set():
+            with Hawk_Brain.detectionLock:
                 global ptBlue
                 objectBlue = ptBlue
                 objectRed = ptRed
 
-            with distanceLock:
+            with Hawk_Brain.distanceLock:
                 global boxCheckStat, distanceBlu, distanceRed
                 boxCheckStat = True
-                distanceBlu = distanceCalc("blue",ptBlue)
-                distanceRed = distanceCalc("red",ptRed)
+                distanceBlu = Hawk_Brain.distanceCalc("blue",ptBlue)
+                distanceRed = Hawk_Brain.distanceCalc("red",ptRed)
                 Widther = widthDis
             
             print(f'objectblue is {ptBlue}')
@@ -655,28 +655,28 @@ class Hawk_Brain:
                     print('\n\n blue point polygon test less than 0: = ')
                     print(f'distance between blue and object is{distanceBlu}')
                     
-                    send_safety(push_object)    
-                    log(text_widget, 'line 609')
+                    Hawk_Brain.send_safety(push_object)    
+                    Hawk_Brain.log(text_widget, 'line 609')
                 
                 else:
-                    send_safety(pull_object)
-                    log(text_widget, 'line 613')
+                    Hawk_Brain.end_safety(pull_object)
+                    Hawk_Brain.log(text_widget, 'line 613')
             
             else:
-                send_safety(pull_object)
-                log(text_widget, 'line 617')
+                Hawk_Brain.send_safety(pull_object)
+                Hawk_Brain.log(text_widget, 'line 617')
             
             if type(objectRed) != type(None):
                 if abs(distanceRed) <= abs(Widther):
                     print('\n\n red point polygon test less than 0: = ')
                     print(f'distance between red and object is{distanceRed}')
-                    send_safety(push_object)
+                    Hawk_Brain.send_safety(push_object)
                     
                 
                 else:
-                    send_safety(pull_object)
+                    Hawk_Brain.send_safety(pull_object)
             else:
-                send_safety(pull_object)
+                Hawk_Brain.send_safety(pull_object)
 
     def detectionInit():
         global thread6
@@ -692,15 +692,15 @@ class Hawk_Brain:
         
         print('detection initialized')
         
-        thread6 = threading.Thread(target=_detection_)
+        thread6 = threading.Thread(target=Hawk_Brain._detection_)
         thread6.start()
         
         def updateCanvas():
             print('entered updatecanvas')
-            if threadKill.is_set():
+            if Hawk_Brain.threadKill.is_set():
                 displayWindow.destroy()
                 return
-            with detectionLock:
+            with Hawk_Brain.detectionLock:
                 global imgtk
                 if img != None:
                     imgtk = ImageTk.PhotoImage(image=img)
@@ -760,7 +760,7 @@ class Hawk_Brain:
             print(f'ObjectW is {objectW}\n')
             objectCS = int(slider2.get())
             print(f'objectCS is {objectCS}')
-            with distanceLock:
+            with Hawk_Brain.distanceLock:
                 global widthDis
                 widthDis = objectW
         
@@ -812,7 +812,7 @@ class Hawk_Brain:
         while type(std) == type(None):
             print('waiting for cam')
         
-        nxtBtn = tk.Button(colourWindow, text='next', command=lambda: detectionInit())
+        nxtBtn = tk.Button(colourWindow, text='next', command=lambda: Hawk_Brain.detectionInit())
         nxtBtn.place(x= 160, y=400)
         
         updateScale()
