@@ -1,1 +1,1 @@
-{"comList_val": "Name: /dev/cu.Bluetooth-Incoming-Port || Description: n/a", "camList_val": "0", "baud_val": "9600", "slider0Obj": "339", "slider1Obj": "168", "width": "1920", "height": "1080"}
+{"comList_val": "Name: /dev/cu.usbmodem1201 || Description: Arduino Uno", "camList_val": "1", "baud_val": "9600", "slider0Obj": "339", "slider1Obj": "168", "width": "1280", "height": "960"}

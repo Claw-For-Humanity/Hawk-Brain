@@ -65,6 +65,7 @@ slider0Obj = None
 slider1Obj = None
 width = None
 height = None
+prevData = None
 
 if not os.path.exists(savePath):
     os.makedirs(savePath)
@@ -97,8 +98,8 @@ def __initiate__(): # returns camport, comport and baudrate
     window.title("Project Claw For Humanity Port Selector")
     window.geometry("600x240")
     window.resizable(False,False)
-    mphoto = PhotoImage(file=f'{os.path.join(os.getcwd(),"sources","cfhmain.png")}')
-    window.iconphoto(True, mphoto)
+    # mphoto = PhotoImage(file=f'{os.path.join(os.getcwd(),"sources","cfhmain.png")}')
+    # window.iconphoto(True, mphoto)
     print (f'\n\n{comList_val}')
     if comList_val != 'None':
         comList_val = tk.StringVar(window, str(comList_val))
@@ -242,7 +243,7 @@ def camera_Setting(camPort, selectedSerialDescription, bdrate): # accepts campor
             return
         else:
             pass
-        print('entered adjust resolution')
+
         
         camDisplayer(width, height, communication)
         
